@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-translate-v4';
+const CACHE_NAME = 'smart-translate-v5';
 const ASSETS = [
   './',
   './index.html',

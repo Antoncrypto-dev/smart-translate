@@ -3,7 +3,10 @@ let langFrom = 'en';
 let langTo = 'ru';
 let isListening = false;
 let recognition = null;
-let transcriptionEnabled = true;
+let transOpen = false;   // transcription panel visibility
+let lastTransLang = '';  // language for which we show transcription
+let lastOrigText = '';   // original text for transcription
+let lastTransResult = ''; // translated text
 
 // ===== DOM =====
 const $ = s => document.querySelector(s);
@@ -24,8 +27,13 @@ const translationEl = $('#translation');
 const transcriptionEl = $('#transcription');
 const transcriptionCard = $('#transcription-card');
 const transLabel = $('#trans-label');
+const transLoading = $('#trans-loading');
 const wordsEl = $('#words');
 const breakdownCard = $('#breakdown-card');
+const btnToggleTrans = $('#btn-toggle-trans');
+const transToggleText = $('#trans-toggle-text');
+const autodetectHint = $('#autodetect-hint');
+const autodetectText = $('#autodetect-text');
 
 // ===== Language Data =====
 const LANGS = {
@@ -36,9 +44,32 @@ const LANGS = {
 
 const placeholders = { en: 'Type in English...', ru: 'Введи на русском...', fi: 'Kirjoita suomeksi...' };
 
+// ===== Auto-detect language =====
+function detectLanguage(text) {
+  const TE = window.TranscriptionEngine;
+  if (!TE) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // Count character types
+  const cyrCount = (trimmed.match(/[а-яА-ЯёЁ]/g) || []).length;
+  const fiChars = (trimmed.match(/[äöåÄÖÅ]/g) || []).length;
+  const latinCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+  const total = cyrCount + latinCount + fiChars;
+  if (total === 0) return null;
+
+  // If majority is Cyrillic → Russian
+  if (cyrCount > latinCount + fiChars) return 'ru';
+  // If Finnish-specific characters present → Finnish
+  if (fiChars > 0) return 'fi';
+  // Otherwise Latin → English
+  if (latinCount > cyrCount) return 'en';
+
+  return null;
+}
+
 // ===== Dropdown Language Picker =====
-let openDropdown = null; // track which dropdown is open
-let overlay = null;
+let openDropdown = null;
 
 function setupDropdowns() {
   const selectFrom = $('#select-from');
@@ -46,36 +77,23 @@ function setupDropdowns() {
   const dropdownFrom = $('#dropdown-from');
   const dropdownTo = $('#dropdown-to');
 
-  // Toggle FROM dropdown
   selectFrom.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (openDropdown === 'from') {
-      closeDropdowns();
-    } else {
-      closeDropdowns();
-      openDropdownPanel('from');
-    }
+    if (openDropdown === 'from') { closeDropdowns(); }
+    else { closeDropdowns(); openDropdownPanel('from'); }
   });
 
-  // Toggle TO dropdown
   selectTo.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (openDropdown === 'to') {
-      closeDropdowns();
-    } else {
-      closeDropdowns();
-      openDropdownPanel('to');
-    }
+    if (openDropdown === 'to') { closeDropdowns(); }
+    else { closeDropdowns(); openDropdownPanel('to'); }
   });
 
-  // FROM options
   dropdownFrom.querySelectorAll('.lang-option').forEach(opt => {
     opt.addEventListener('click', (e) => {
       e.stopPropagation();
       const newLang = opt.dataset.lang;
       if (newLang === langFrom) { closeDropdowns(); return; }
-
-      // If same as target, swap
       if (newLang === langTo) {
         langTo = langFrom;
         updateSelectDisplay('to', langTo);
@@ -89,14 +107,11 @@ function setupDropdowns() {
     });
   });
 
-  // TO options
   dropdownTo.querySelectorAll('.lang-option').forEach(opt => {
     opt.addEventListener('click', (e) => {
       e.stopPropagation();
       const newLang = opt.dataset.lang;
       if (newLang === langTo) { closeDropdowns(); return; }
-
-      // If same as source, swap
       if (newLang === langFrom) {
         langFrom = langTo;
         updateSelectDisplay('from', langFrom);
@@ -120,7 +135,6 @@ function openDropdownPanel(which) {
   selectEl.setAttribute('aria-expanded', 'true');
   openDropdown = which;
 
-  // Close on any tap outside the dropdown (use capture listener on document)
   setTimeout(() => {
     document.addEventListener('click', handleOutsideClick, true);
     document.addEventListener('touchstart', handleOutsideClick, true);
@@ -128,7 +142,6 @@ function openDropdownPanel(which) {
 }
 
 function handleOutsideClick(e) {
-  // If clicking inside a dropdown or a select button, let the normal handler deal with it
   if (e.target.closest('.lang-select-wrap')) return;
   closeDropdowns();
 }
@@ -180,7 +193,6 @@ btnSwap.addEventListener('click', () => {
   }
   updatePlaceholder();
 
-  // spin animation
   btnSwap.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
   btnSwap.style.transform = 'rotate(180deg)';
   setTimeout(() => { btnSwap.style.transition = 'none'; btnSwap.style.transform = ''; }, 450);
@@ -200,6 +212,8 @@ btnClear.addEventListener('click', () => {
   input.style.height = 'auto';
   results.classList.add('hidden');
   errorEl.classList.add('hidden');
+  autodetectHint.classList.add('hidden');
+  resetTransToggle();
   input.focus();
 });
 
@@ -346,7 +360,6 @@ const LINGVA_INSTANCES = [
 ];
 
 async function translateText(text, from, to) {
-  // Try Lingva first
   for (const base of LINGVA_INSTANCES) {
     try {
       const url = `${base}/api/v1/${from}/${to}/${encodeURIComponent(text)}`;
@@ -358,7 +371,6 @@ async function translateText(text, from, to) {
     } catch {}
   }
 
-  // Fallback: MyMemory
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}&de=smart-translate-app@mail.com`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Ошибка сети — проверь интернет');
@@ -373,10 +385,133 @@ async function translateText(text, from, to) {
   throw new Error('Не удалось перевести текст');
 }
 
+// ===== Transcription Toggle (on-demand) =====
+function resetTransToggle() {
+  transOpen = false;
+  lastTransLang = '';
+  lastOrigText = '';
+  lastTransResult = '';
+  transcriptionCard.classList.add('hidden');
+  transcriptionEl.textContent = '';
+  transLoading.classList.add('hidden');
+  btnToggleTrans.classList.remove('open');
+  transToggleText.textContent = 'Показать транскрипцию';
+}
+
+btnToggleTrans.addEventListener('click', async () => {
+  if (transOpen) {
+    // Hide
+    transOpen = false;
+    transcriptionCard.classList.add('hidden');
+    btnToggleTrans.classList.remove('open');
+    transToggleText.textContent = 'Показать транскрипцию';
+    return;
+  }
+
+  // Show — load transcription on demand
+  transOpen = true;
+  btnToggleTrans.classList.add('open');
+  transToggleText.textContent = 'Скрыть транскрипцию';
+
+  // Determine which language to transcribe
+  const TE = window.TranscriptionEngine;
+  if (!TE) return;
+
+  const langNames = { en: 'английского', fi: 'финского', ru: 'русского' };
+  let textToTranscribe = '';
+  let transLang = '';
+
+  if (langFrom === 'ru') {
+    // Translating FROM Russian → transcribe the result (target language)
+    textToTranscribe = lastTransResult;
+    transLang = langTo;
+  } else {
+    // Translating FROM en/fi → transcribe the original text (source language)
+    textToTranscribe = lastOrigText;
+    transLang = langFrom;
+  }
+
+  // If both are ru, no transcription needed
+  if (transLang === 'ru' || !textToTranscribe) {
+    transOpen = false;
+    btnToggleTrans.classList.remove('open');
+    transToggleText.textContent = 'Показать транскрипцию';
+    return;
+  }
+
+  transLabel.textContent = `Произношение ${langNames[transLang] || ''}`;
+
+  // Show card with loading
+  transcriptionCard.classList.remove('hidden');
+  transcriptionEl.textContent = '';
+  transLoading.classList.remove('hidden');
+
+  try {
+    const transText = await TE.transcribeSentence(textToTranscribe, transLang);
+    transLoading.classList.add('hidden');
+    if (transText) {
+      transcriptionEl.textContent = `[ ${transText} ]`;
+    } else {
+      transcriptionEl.textContent = '—';
+    }
+  } catch (e) {
+    transLoading.classList.add('hidden');
+    transcriptionEl.textContent = 'Ошибка загрузки транскрипции';
+  }
+});
+
 // ===== Main Translate =====
 async function handleTranslate() {
   const text = input.value.trim();
   if (!text) { showError('Введи текст для перевода'); return; }
+
+  // Auto-detect language and swap if needed
+  const detected = detectLanguage(text);
+  let didSwap = false;
+
+  if (detected && detected !== langFrom) {
+    // The text language matches langTo → swap
+    if (detected === langTo) {
+      const prevFrom = langFrom;
+      const prevTo = langTo;
+      langFrom = prevTo;
+      langTo = prevFrom;
+      updateSelectDisplay('from', langFrom);
+      updateSelectDisplay('to', langTo);
+      markActiveOption('dropdown-from', langFrom);
+      markActiveOption('dropdown-to', langTo);
+      updatePlaceholder();
+      didSwap = true;
+    } else if (detected !== langFrom) {
+      // Detected a third language — set it as source, keep target
+      const prevTarget = langTo;
+      langFrom = detected;
+      // If detected same as target, swap target to something else
+      if (langFrom === prevTarget) {
+        // Find the other lang
+        const others = ['en', 'ru', 'fi'].filter(l => l !== langFrom);
+        langTo = others[0];
+      }
+      updateSelectDisplay('from', langFrom);
+      updateSelectDisplay('to', langTo);
+      markActiveOption('dropdown-from', langFrom);
+      markActiveOption('dropdown-to', langTo);
+      updatePlaceholder();
+      didSwap = true;
+    }
+  }
+
+  // Show auto-detect hint
+  if (didSwap) {
+    const langNames = { en: 'Английский', fi: 'Финский', ru: 'Русский' };
+    autodetectText.textContent = `Определён ${langNames[langFrom]} → ${langNames[langTo]}`;
+    autodetectHint.classList.remove('hidden');
+  } else {
+    autodetectHint.classList.add('hidden');
+  }
+
+  // Reset transcription state
+  resetTransToggle();
 
   results.classList.add('hidden');
   errorEl.classList.add('hidden');
@@ -384,31 +519,19 @@ async function handleTranslate() {
 
   try {
     const result = await translateText(text, langFrom, langTo);
-    const TE = window.TranscriptionEngine;
 
-    let transText = '';
-    let label = '';
-    const langNames = { en: 'английского', fi: 'финского', ru: 'русского' };
-
-    if (transcriptionEnabled) {
-      if (langFrom === 'ru') {
-        transText = await TE.transcribeSentence(result, langTo);
-        label = `Произношение ${langNames[langTo]}`;
-      } else {
-        transText = await TE.transcribeSentence(text, langFrom);
-        label = `Произношение ${langNames[langFrom]}`;
-      }
-    }
+    // Save for on-demand transcription
+    lastOrigText = text;
+    lastTransResult = result;
+    lastTransLang = (langFrom === 'ru') ? langTo : langFrom;
 
     translationEl.textContent = result;
-    transLabel.textContent = label;
 
-    const showTranscription = transcriptionEnabled && (langFrom !== 'ru' || langTo !== 'ru') && transText;
-    if (showTranscription) {
-      transcriptionEl.textContent = `[ ${transText} ]`;
-      transcriptionCard.classList.remove('hidden');
+    // Hide transcription toggle if both are ru
+    if (langFrom === 'ru' && langTo === 'ru') {
+      btnToggleTrans.classList.add('hidden');
     } else {
-      transcriptionCard.classList.add('hidden');
+      btnToggleTrans.classList.remove('hidden');
     }
 
     await buildBreakdown(text, langFrom, langTo);
@@ -456,7 +579,8 @@ async function buildBreakdown(text, from, to) {
 
     let html = `<span class="w-orig">${esc(word)}</span>`;
 
-    if (transcriptionEnabled && from !== 'ru') {
+    // Show transcription in word chips for non-Russian source
+    if (from !== 'ru') {
       const tr = await TE.getTranscription(word, from);
       if (tr) html += `<span class="w-trans">[${esc(tr)}]</span>`;
     }
@@ -508,16 +632,6 @@ if ('serviceWorker' in navigator) {
     closeBtn?.addEventListener('click', () => hint.classList.add('hidden'));
   }
 })();
-
-// ===== Transcription Toggle =====
-const toggleBtn = $('#toggle-transcription');
-if (toggleBtn) {
-  toggleBtn.addEventListener('click', () => {
-    transcriptionEnabled = !transcriptionEnabled;
-    toggleBtn.classList.toggle('active', transcriptionEnabled);
-    toggleBtn.setAttribute('aria-checked', transcriptionEnabled);
-  });
-}
 
 // ===== Init =====
 setupDropdowns();

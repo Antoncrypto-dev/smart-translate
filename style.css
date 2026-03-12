@@ -90,9 +90,6 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .lang-option.active{color:var(--text);background:var(--primary-container)}
 .lang-option.active .opt-check{opacity:1}
 
-/* Dropdown overlay (to close on tap outside) */
-.dropdown-overlay{position:fixed;inset:0;z-index:55;background:transparent}
-
 /* Swap button */
 .swap-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border-hi);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:all .5s var(--spring);flex-shrink:0}
 .swap-btn:hover{background:var(--surface-container);color:var(--text-2)}
@@ -126,16 +123,9 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .translate-btn>svg,.translate-btn>span{position:relative;z-index:1}
 @keyframes shine{0%{transform:translateX(-100%)}50%{transform:translateX(100%)}100%{transform:translateX(100%)}}
 
-/* ===== Transcription Toggle ===== */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:0 4px}
-.toggle-label{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:500;color:var(--text-2)}
-.toggle-label svg{color:var(--text-3)}
-.toggle-switch{width:44px;height:26px;border-radius:var(--r-full);background:var(--surface-container);border:1.5px solid var(--border-hi);position:relative;cursor:pointer;transition:all .3s var(--md-ease);flex-shrink:0}
-.toggle-switch .toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--text-3);transition:all .3s var(--spring);box-shadow:var(--elevation-1)}
-.toggle-switch.active{background:var(--primary-container);border-color:var(--primary-dim)}
-.toggle-switch.active .toggle-thumb{left:calc(100% - 21px);background:var(--primary)}
-.toggle-switch:active .toggle-thumb{width:22px}
-.toggle-switch.active:active .toggle-thumb{left:calc(100% - 25px)}
+/* ===== Auto-detect hint ===== */
+.autodetect-hint{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;font-size:.72rem;font-weight:500;color:var(--primary);background:var(--primary-container);border-radius:var(--r-full);animation:fadeUp .4s var(--md-ease-out) forwards;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.autodetect-hint svg{flex-shrink:0;color:var(--primary);opacity:.7}
 
 /* ===== Loading ===== */
 .loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;color:var(--text-2);font-size:.85rem;font-weight:500}
@@ -158,9 +148,22 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .card-btns{display:flex;gap:4px}
 .translation-text{font-size:1.1rem;font-weight:600;line-height:1.5;color:var(--text)}
 
-/* Transcription (Material Secondary Container) */
-.accent-card{background:var(--accent-bg);border-color:var(--accent-border);padding:14px 16px}
+/* ===== Transcription Toggle Button ===== */
+.trans-toggle-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 16px;border-radius:var(--r-full);border:1.5px solid var(--accent-border);background:var(--accent-bg);color:var(--accent);font-size:.78rem;font-weight:600;transition:all .3s var(--md-ease);cursor:pointer;position:relative;overflow:hidden}
+.trans-toggle-btn::before{content:'';position:absolute;inset:0;border-radius:inherit;background:var(--accent);opacity:0;transition:opacity .2s;pointer-events:none}
+.trans-toggle-btn:hover::before{opacity:.06}
+.trans-toggle-btn:active{transform:scale(.97)}.trans-toggle-btn:active::before{opacity:.1}
+.trans-toggle-btn.open{border-color:var(--accent);background:rgba(192,132,252,0.14)}
+.trans-toggle-arrow{transition:transform .3s var(--md-ease);flex-shrink:0}
+.trans-toggle-btn.open .trans-toggle-arrow{transform:rotate(180deg)}
+
+/* ===== Transcription Card (on-demand) ===== */
+.accent-card{background:var(--accent-bg);border-color:var(--accent-border);padding:14px 16px;animation:slideUp .35s var(--md-ease-out) forwards}
 .transcription-text{font-size:1.05rem;font-weight:600;font-style:italic;color:var(--accent);line-height:1.5;margin-top:6px}
+
+/* Mini loader inside transcription card */
+.trans-mini-loader{display:flex;align-items:center;justify-content:center;padding:8px 0}
+.loader-sm div{width:7px;height:7px}
 
 /* ===== Word Grid (Material Chips) ===== */
 .words-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
