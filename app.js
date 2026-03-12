@@ -27,38 +27,136 @@ const transLabel = $('#trans-label');
 const wordsEl = $('#words');
 const breakdownCard = $('#breakdown-card');
 
-// ===== Language Picker =====
-function setupLangPicker() {
-  $$('[data-from]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      langFrom = btn.dataset.from;
-      $$('[data-from]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (langFrom === langTo) {
-        const other = ['en','ru','fi'].filter(l => l !== langFrom);
-        langTo = other[0];
-        $$('[data-to]').forEach(b => b.classList.toggle('active', b.dataset.to === langTo));
+// ===== Language Data =====
+const LANGS = {
+  en: { flag: '🇬🇧', name: 'Английский' },
+  ru: { flag: '🇷🇺', name: 'Русский' },
+  fi: { flag: '🇫🇮', name: 'Финский' },
+};
+
+const placeholders = { en: 'Type in English...', ru: 'Введи на русском...', fi: 'Kirjoita suomeksi...' };
+
+// ===== Dropdown Language Picker =====
+let openDropdown = null; // track which dropdown is open
+let overlay = null;
+
+function setupDropdowns() {
+  const selectFrom = $('#select-from');
+  const selectTo = $('#select-to');
+  const dropdownFrom = $('#dropdown-from');
+  const dropdownTo = $('#dropdown-to');
+
+  // Toggle FROM dropdown
+  selectFrom.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (openDropdown === 'from') {
+      closeDropdowns();
+    } else {
+      closeDropdowns();
+      openDropdownPanel('from');
+    }
+  });
+
+  // Toggle TO dropdown
+  selectTo.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (openDropdown === 'to') {
+      closeDropdowns();
+    } else {
+      closeDropdowns();
+      openDropdownPanel('to');
+    }
+  });
+
+  // FROM options
+  dropdownFrom.querySelectorAll('.lang-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newLang = opt.dataset.lang;
+      if (newLang === langFrom) { closeDropdowns(); return; }
+
+      // If same as target, swap
+      if (newLang === langTo) {
+        langTo = langFrom;
+        updateSelectDisplay('to', langTo);
+        markActiveOption('dropdown-to', langTo);
       }
+      langFrom = newLang;
+      updateSelectDisplay('from', langFrom);
+      markActiveOption('dropdown-from', langFrom);
       updatePlaceholder();
+      closeDropdowns();
     });
   });
 
-  $$('[data-to]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      langTo = btn.dataset.to;
-      $$('[data-to]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (langFrom === langTo) {
-        const other = ['en','ru','fi'].filter(l => l !== langTo);
-        langFrom = other[0];
-        $$('[data-from]').forEach(b => b.classList.toggle('active', b.dataset.from === langFrom));
+  // TO options
+  dropdownTo.querySelectorAll('.lang-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newLang = opt.dataset.lang;
+      if (newLang === langTo) { closeDropdowns(); return; }
+
+      // If same as source, swap
+      if (newLang === langFrom) {
+        langFrom = langTo;
+        updateSelectDisplay('from', langFrom);
+        markActiveOption('dropdown-from', langFrom);
       }
+      langTo = newLang;
+      updateSelectDisplay('to', langTo);
+      markActiveOption('dropdown-to', langTo);
       updatePlaceholder();
+      closeDropdowns();
     });
   });
 }
 
-const placeholders = { en: 'Type in English...', ru: 'Введи на русском...', fi: 'Kirjoita suomeksi...' };
+function openDropdownPanel(which) {
+  const selectEl = which === 'from' ? $('#select-from') : $('#select-to');
+  const dropdownEl = which === 'from' ? $('#dropdown-from') : $('#dropdown-to');
+
+  selectEl.classList.add('open');
+  dropdownEl.classList.add('open');
+  selectEl.setAttribute('aria-expanded', 'true');
+  openDropdown = which;
+
+  // Close on any tap outside the dropdown (use capture listener on document)
+  setTimeout(() => {
+    document.addEventListener('click', handleOutsideClick, true);
+    document.addEventListener('touchstart', handleOutsideClick, true);
+  }, 10);
+}
+
+function handleOutsideClick(e) {
+  // If clicking inside a dropdown or a select button, let the normal handler deal with it
+  if (e.target.closest('.lang-select-wrap')) return;
+  closeDropdowns();
+}
+
+function closeDropdowns() {
+  $('#select-from').classList.remove('open');
+  $('#select-to').classList.remove('open');
+  $('#dropdown-from').classList.remove('open');
+  $('#dropdown-to').classList.remove('open');
+  $('#select-from').setAttribute('aria-expanded', 'false');
+  $('#select-to').setAttribute('aria-expanded', 'false');
+  openDropdown = null;
+
+  document.removeEventListener('click', handleOutsideClick, true);
+  document.removeEventListener('touchstart', handleOutsideClick, true);
+}
+
+function updateSelectDisplay(which, lang) {
+  const data = LANGS[lang];
+  $(`#flag-${which}`).textContent = data.flag;
+  $(`#name-${which}`).textContent = data.name;
+}
+
+function markActiveOption(dropdownId, activeLang) {
+  $(`#${dropdownId}`).querySelectorAll('.lang-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.lang === activeLang);
+  });
+}
 
 function updatePlaceholder() {
   input.placeholder = placeholders[langFrom] || 'Введи текст...';
@@ -70,8 +168,10 @@ btnSwap.addEventListener('click', () => {
   langFrom = langTo;
   langTo = tmp;
 
-  $$('[data-from]').forEach(b => b.classList.toggle('active', b.dataset.from === langFrom));
-  $$('[data-to]').forEach(b => b.classList.toggle('active', b.dataset.to === langTo));
+  updateSelectDisplay('from', langFrom);
+  updateSelectDisplay('to', langTo);
+  markActiveOption('dropdown-from', langFrom);
+  markActiveOption('dropdown-to', langTo);
 
   const translated = translationEl.textContent;
   if (translated && !results.classList.contains('hidden')) {
@@ -420,6 +520,6 @@ if (toggleBtn) {
 }
 
 // ===== Init =====
-setupLangPicker();
+setupDropdowns();
 updatePlaceholder();
 input.focus();

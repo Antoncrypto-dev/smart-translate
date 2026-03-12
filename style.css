@@ -65,23 +65,41 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .logo{display:flex;align-items:center;gap:10px}
 .logo-icon{width:44px;height:44px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--primary-dim),var(--accent));display:flex;align-items:center;justify-content:center;box-shadow:var(--elevation-2)}
 
-/* ===== Language Picker ===== */
-.lang-picker{display:flex;align-items:center;gap:8px}
-.lang-group{display:flex;gap:4px;flex:1;justify-content:center}
-.lang-chip{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface);font-size:.78rem;font-weight:600;color:var(--text-2);transition:all .4s var(--md-ease);position:relative;overflow:hidden}
-.lang-chip::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,var(--primary-dim),var(--accent));opacity:0;transition:opacity .4s var(--md-ease)}
-.lang-chip>*{position:relative;z-index:1}
-.lang-chip:active{transform:scale(.94)}
-.lang-chip.active{color:#fff;border-color:transparent;box-shadow:var(--elevation-2)}
-.lang-chip.active::before{opacity:1}
-.chip-flag{font-size:.95rem;line-height:1}
-.chip-label{font-weight:700;font-size:.72rem;letter-spacing:.04em}
+/* ===== Language Picker (Dropdown-based) ===== */
+.lang-picker{display:flex;align-items:center;gap:8px;position:relative;z-index:60}
+.lang-select-wrap{position:relative;flex:1;min-width:0;z-index:100}
+.lang-select{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:var(--r-md);border:1.5px solid var(--border-hi);background:var(--surface);color:var(--text);font-size:.82rem;font-weight:600;transition:all .3s var(--md-ease);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.lang-select:active{transform:scale(.97);background:var(--surface-container)}
+.lang-select.open{border-color:var(--primary-dim);background:var(--surface-container)}
+.lang-flag{font-size:1.1rem;line-height:1;flex-shrink:0}
+.lang-name{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lang-arrow{color:var(--text-3);flex-shrink:0;transition:transform .3s var(--md-ease)}
+.lang-select.open .lang-arrow{transform:rotate(180deg)}
+
+/* Dropdown panel */
+.lang-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:rgba(22,27,45,0.98);border:1.5px solid var(--border-hi);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--elevation-3);z-index:999;opacity:0;transform:translateY(-8px) scaleY(0.92);transform-origin:top center;pointer-events:none;transition:opacity .25s var(--md-ease), transform .25s var(--md-ease)}
+.lang-dropdown.open{opacity:1;transform:translateY(0) scaleY(1);pointer-events:auto}
+
+/* Dropdown options */
+.lang-option{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;font-size:.82rem;font-weight:500;color:var(--text-2);transition:all .15s var(--md-ease);cursor:pointer;border-bottom:1px solid var(--border)}
+.lang-option:last-child{border-bottom:none}
+.lang-option:active{background:var(--surface-bright)}
+.lang-option .opt-flag{font-size:1.05rem;line-height:1}
+.lang-option .opt-name{flex:1;text-align:left}
+.lang-option .opt-check{color:var(--primary);font-size:.85rem;opacity:0;transition:opacity .2s}
+.lang-option.active{color:var(--text);background:var(--primary-container)}
+.lang-option.active .opt-check{opacity:1}
+
+/* Dropdown overlay (to close on tap outside) */
+.dropdown-overlay{position:fixed;inset:0;z-index:55;background:transparent}
+
+/* Swap button */
 .swap-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border-hi);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:all .5s var(--spring);flex-shrink:0}
 .swap-btn:hover{background:var(--surface-container);color:var(--text-2)}
 .swap-btn:active{transform:rotate(180deg) scale(.9);background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:var(--elevation-2)}
 
 /* ===== Glass Card (Material Surface) ===== */
-.glass-card{background:var(--surface);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px;box-shadow:var(--elevation-1);transition:box-shadow .3s var(--md-ease),transform .3s var(--md-ease)}
+.glass-card{background:rgba(15,20,35,0.85);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px;box-shadow:var(--elevation-1);transition:box-shadow .3s var(--md-ease),transform .3s var(--md-ease)}
 .glass-card:hover{box-shadow:var(--elevation-2)}
 
 /* ===== Input ===== */
@@ -191,6 +209,6 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 
 /* ===== Responsive ===== */
 @media(max-width:360px){
-  .chip-label{font-size:.65rem}
-  .lang-chip{padding:7px 10px;gap:4px}
+  .lang-name{font-size:.75rem}
+  .lang-select{padding:9px 10px;gap:6px}
 }

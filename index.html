@@ -58,27 +58,58 @@
 
     <!-- Language Picker -->
     <div class="lang-picker anim-fade" style="--delay:1">
-      <div class="lang-group">
-        <button class="lang-chip active" data-from="en"><span class="chip-flag">🇬🇧</span><span class="chip-label">EN</span></button>
-        <button class="lang-chip" data-from="ru"><span class="chip-flag">🇷🇺</span><span class="chip-label">RU</span></button>
-        <button class="lang-chip" data-from="fi"><span class="chip-flag">🇫🇮</span><span class="chip-label">FI</span></button>
+      <!-- FROM dropdown -->
+      <div class="lang-select-wrap">
+        <button class="lang-select" id="select-from" aria-haspopup="listbox" aria-expanded="false">
+          <span class="lang-flag" id="flag-from">🇬🇧</span>
+          <span class="lang-name" id="name-from">Английский</span>
+          <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="lang-dropdown" id="dropdown-from" role="listbox">
+          <button class="lang-option active" data-lang="en" data-flag="🇬🇧" data-name="Английский" role="option">
+            <span class="opt-flag">🇬🇧</span><span class="opt-name">Английский</span><span class="opt-check">✓</span>
+          </button>
+          <button class="lang-option" data-lang="ru" data-flag="🇷🇺" data-name="Русский" role="option">
+            <span class="opt-flag">🇷🇺</span><span class="opt-name">Русский</span><span class="opt-check">✓</span>
+          </button>
+          <button class="lang-option" data-lang="fi" data-flag="🇫🇮" data-name="Финский" role="option">
+            <span class="opt-flag">🇫🇮</span><span class="opt-name">Финский</span><span class="opt-check">✓</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Swap button -->
       <button id="btn-swap" class="swap-btn" aria-label="Поменять языки">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M7 16V4m0 12l-3-3m3 3l3-3"/>
           <path d="M17 8v12m0-12l3 3m-3-3l-3 3"/>
         </svg>
       </button>
-      <div class="lang-group">
-        <button class="lang-chip" data-to="en"><span class="chip-flag">🇬🇧</span><span class="chip-label">EN</span></button>
-        <button class="lang-chip active" data-to="ru"><span class="chip-flag">🇷🇺</span><span class="chip-label">RU</span></button>
-        <button class="lang-chip" data-to="fi"><span class="chip-flag">🇫🇮</span><span class="chip-label">FI</span></button>
+
+      <!-- TO dropdown -->
+      <div class="lang-select-wrap">
+        <button class="lang-select" id="select-to" aria-haspopup="listbox" aria-expanded="false">
+          <span class="lang-flag" id="flag-to">🇷🇺</span>
+          <span class="lang-name" id="name-to">Русский</span>
+          <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="lang-dropdown" id="dropdown-to" role="listbox">
+          <button class="lang-option" data-lang="en" data-flag="🇬🇧" data-name="Английский" role="option">
+            <span class="opt-flag">🇬🇧</span><span class="opt-name">Английский</span><span class="opt-check">✓</span>
+          </button>
+          <button class="lang-option active" data-lang="ru" data-flag="🇷🇺" data-name="Русский" role="option">
+            <span class="opt-flag">🇷🇺</span><span class="opt-name">Русский</span><span class="opt-check">✓</span>
+          </button>
+          <button class="lang-option" data-lang="fi" data-flag="🇫🇮" data-name="Финский" role="option">
+            <span class="opt-flag">🇫🇮</span><span class="opt-name">Финский</span><span class="opt-check">✓</span>
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Input -->
     <div class="glass-card input-card anim-fade" style="--delay:2">
-      <textarea id="input" class="input-area" placeholder="Введи текст..." rows="3"></textarea>
+      <textarea id="input" class="input-area" placeholder="Type in English..." rows="3"></textarea>
       <div class="input-bar">
         <span id="counter" class="counter">0</span>
         <div class="input-btns">
