@@ -28,7 +28,6 @@
   --spring: cubic-bezier(.34,1.56,.64,1);
   --md-ease: cubic-bezier(0.2, 0, 0, 1);
   --md-ease-out: cubic-bezier(0, 0, 0, 1);
-  /* Material 3 elevation shadows */
   --elevation-1: 0 1px 3px 1px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
   --elevation-2: 0 2px 6px 2px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
   --elevation-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3);
@@ -45,17 +44,6 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit;-we
 textarea{font:inherit;color:inherit;border:none;outline:none;background:none;resize:none;-webkit-appearance:none}
 :focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:var(--r-sm)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-
-/* ===== Material Ripple ===== */
-.ripple{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
-.ripple::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at var(--ripple-x,50%) var(--ripple-y,50%),rgba(255,255,255,.15) 0%,transparent 60%);opacity:0;transition:opacity .5s var(--md-ease);pointer-events:none}
-.ripple:active::after{opacity:1;transition:opacity .1s}
-
-/* ===== Material State Layer ===== */
-.state-layer{position:relative;overflow:hidden}
-.state-layer::before{content:'';position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity .2s var(--md-ease);pointer-events:none;background:currentColor}
-.state-layer:hover::before{opacity:.06}
-.state-layer:active::before{opacity:.1}
 
 /* ===== Bg Glow ===== */
 .bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
@@ -76,20 +64,40 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .header{display:flex;align-items:center}
 .logo{display:flex;align-items:center;gap:10px}
 .logo-icon{width:44px;height:44px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--primary-dim),var(--accent));display:flex;align-items:center;justify-content:center;box-shadow:var(--elevation-2)}
-.logo-text{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
 
-/* ===== Language Picker ===== */
+/* ===== Language Picker (Dropdown) ===== */
 .lang-picker{display:flex;align-items:center;gap:8px}
-.lang-group{display:flex;gap:4px;flex:1;justify-content:center}
-.lang-chip{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface);font-size:.78rem;font-weight:500;color:var(--text-2);transition:all .4s var(--md-ease);position:relative;overflow:hidden}
-.lang-chip::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,var(--primary-dim),var(--accent));opacity:0;transition:opacity .4s var(--md-ease)}
-.lang-chip>*{position:relative;z-index:1}
-.lang-chip:active{transform:scale(.94)}
-.lang-chip.active{color:#fff;border-color:transparent;box-shadow:var(--elevation-2)}
-.lang-chip.active::before{opacity:1}
-.chip-code{font-weight:700;font-size:.7rem;letter-spacing:.04em}
-.chip-label{font-weight:500}
-.swap-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border-hi);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:all .5s var(--spring);flex-shrink:0}
+.lang-select-wrap{flex:1;position:relative}
+.lang-select{width:100%;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--r-xl);border:1.5px solid var(--border-hi);background:var(--surface);font-size:.82rem;font-weight:600;color:var(--text);transition:all .3s var(--md-ease);cursor:pointer}
+.lang-select:hover{background:var(--surface-container);border-color:rgba(255,255,255,.18)}
+.lang-select:active{transform:scale(.97)}
+.lang-select.open{border-color:var(--primary);background:var(--surface-container);box-shadow:0 0 0 2px rgba(99,102,241,.2)}
+.lang-flag{font-size:1.1rem;line-height:1}
+.lang-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lang-arrow{color:var(--text-3);transition:transform .3s var(--md-ease);flex-shrink:0}
+.lang-select.open .lang-arrow{transform:rotate(180deg)}
+
+/* Dropdown */
+.lang-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:rgba(20,24,40,.97);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border-hi);border-radius:var(--r-lg);padding:6px;max-height:320px;overflow-y:auto;z-index:200;box-shadow:var(--elevation-3);animation:dropIn .25s var(--md-ease-out);overscroll-behavior:contain}
+.lang-dropdown.hidden{display:none!important}
+@keyframes dropIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+.lang-dropdown::-webkit-scrollbar{width:4px}
+.lang-dropdown::-webkit-scrollbar-track{background:transparent}
+.lang-dropdown::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+
+.lang-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);font-size:.82rem;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .2s var(--md-ease);border:none;width:100%;text-align:left;background:none}
+.lang-option:hover{background:var(--surface-bright);color:var(--text)}
+.lang-option:active{transform:scale(.97)}
+.lang-option.active{background:var(--primary-container);color:var(--on-primary-container);font-weight:600}
+.lang-option .opt-flag{font-size:1.1rem}
+.lang-option .opt-name{flex:1}
+.lang-option .opt-code{font-size:.65rem;font-weight:700;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase}
+.lang-option.active .opt-code{color:var(--on-primary-container)}
+
+/* Divider in dropdown */
+.lang-divider{height:1px;background:var(--border);margin:4px 8px}
+
+.swap-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border-hi);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:all .5s var(--spring);flex-shrink:0}
 .swap-btn:hover{background:var(--surface-container);color:var(--text-2)}
 .swap-btn:active{transform:rotate(180deg) scale(.9);background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:var(--elevation-2)}
 
@@ -120,6 +128,17 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .btn-shine{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);animation:shine 3s ease-in-out infinite;pointer-events:none}
 .translate-btn>svg,.translate-btn>span{position:relative;z-index:1}
 @keyframes shine{0%{transform:translateX(-100%)}50%{transform:translateX(100%)}100%{transform:translateX(100%)}}
+
+/* ===== Transcription Toggle ===== */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:0 4px}
+.toggle-label{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:500;color:var(--text-2);cursor:pointer}
+.toggle-label svg{color:var(--text-3)}
+.toggle-switch{width:44px;height:26px;border-radius:var(--r-full);background:var(--surface-container);border:1.5px solid var(--border-hi);position:relative;cursor:pointer;transition:all .3s var(--md-ease);flex-shrink:0}
+.toggle-switch .toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--text-3);transition:all .3s var(--spring);box-shadow:var(--elevation-1)}
+.toggle-switch.active{background:var(--primary-container);border-color:var(--primary-dim)}
+.toggle-switch.active .toggle-thumb{left:calc(100% - 21px);background:var(--primary)}
+.toggle-switch:active .toggle-thumb{width:22px}
+.toggle-switch.active:active .toggle-thumb{left:calc(100% - 25px)}
 
 /* ===== Loading ===== */
 .loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;color:var(--text-2);font-size:.85rem;font-weight:500}
@@ -193,6 +212,9 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 
 /* ===== Responsive ===== */
 @media(max-width:360px){
-  .chip-label{display:none}
-  .lang-chip{padding:7px 10px}
+  .lang-name{font-size:.75rem}
+  .lang-select{padding:8px 10px;gap:6px}
 }
+
+/* ===== Overlay for closing dropdowns ===== */
+.lang-overlay{position:fixed;inset:0;z-index:150;background:transparent}

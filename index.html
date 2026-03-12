@@ -23,7 +23,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Translate">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="Умный переводчик EN ↔ RU ↔ FI с транскрипцией произношения">
+  <meta name="description" content="Умный переводчик с транскрипцией произношения">
 
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -56,23 +56,31 @@
       </div>
     </header>
 
-    <!-- Language Picker -->
+    <!-- Language Picker (Dropdown style) -->
     <div class="lang-picker anim-fade" style="--delay:1">
-      <div class="lang-group">
-        <button class="lang-chip active" data-from="en"><span class="chip-code">EN</span><span class="chip-label">English</span></button>
-        <button class="lang-chip" data-from="ru"><span class="chip-code">RU</span><span class="chip-label">Русский</span></button>
-        <button class="lang-chip" data-from="fi"><span class="chip-code">FI</span><span class="chip-label">Suomi</span></button>
+      <div class="lang-select-wrap">
+        <button class="lang-select" id="lang-from-btn" aria-haspopup="listbox">
+          <span class="lang-flag" id="flag-from">🇬🇧</span>
+          <span class="lang-name" id="name-from">English</span>
+          <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-dropdown hidden" id="dropdown-from" role="listbox"></div>
       </div>
+
       <button id="btn-swap" class="swap-btn" aria-label="Поменять языки">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M7 16V4m0 12l-3-3m3 3l3-3"/>
           <path d="M17 8v12m0-12l3 3m-3-3l-3 3"/>
         </svg>
       </button>
-      <div class="lang-group">
-        <button class="lang-chip active" data-to="ru"><span class="chip-code">RU</span><span class="chip-label">Русский</span></button>
-        <button class="lang-chip" data-to="en"><span class="chip-code">EN</span><span class="chip-label">English</span></button>
-        <button class="lang-chip" data-to="fi"><span class="chip-code">FI</span><span class="chip-label">Suomi</span></button>
+
+      <div class="lang-select-wrap">
+        <button class="lang-select" id="lang-to-btn" aria-haspopup="listbox">
+          <span class="lang-flag" id="flag-to">🇷🇺</span>
+          <span class="lang-name" id="name-to">Русский</span>
+          <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-dropdown hidden" id="dropdown-to" role="listbox"></div>
       </div>
     </div>
 
@@ -98,6 +106,17 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       <span>Перевести</span>
     </button>
+
+    <!-- Transcription toggle -->
+    <div class="toggle-row anim-fade" style="--delay:4">
+      <label class="toggle-label" for="toggle-transcription">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.5A2.5 2.5 0 0 1 9.5 16V8a2.5 2.5 0 0 1 5 0v8a2.5 2.5 0 0 1-2.5 2.5Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>
+        <span>Транскрипция</span>
+      </label>
+      <button class="toggle-switch active" id="toggle-transcription" role="switch" aria-checked="true">
+        <span class="toggle-thumb"></span>
+      </button>
+    </div>
 
     <!-- Loading -->
     <div id="loading" class="loading hidden">

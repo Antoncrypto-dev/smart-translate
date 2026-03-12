@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-translate-v2';
+const CACHE_NAME = 'smart-translate-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -28,12 +28,15 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Fetch: cache-first for static, network-first for API
+// Fetch: network-first for API calls, stale-while-revalidate for static
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // API calls — always go to network
-  if (url.hostname === 'api.mymemory.translated.net') {
+  // API calls — always network
+  if (url.hostname.includes('lingva') ||
+      url.hostname.includes('plausibility') ||
+      url.hostname === 'api.mymemory.translated.net' ||
+      url.hostname === 'api.dictionaryapi.dev') {
     e.respondWith(
       fetch(e.request).catch(() =>
         new Response(JSON.stringify({ error: 'Нет интернета' }), {
@@ -44,8 +47,16 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static assets — cache first
+  // Static assets — stale-while-revalidate (serve cache, update in background)
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(e.request).then(cached => {
+        const fetched = fetch(e.request).then(response => {
+          cache.put(e.request, response.clone());
+          return response;
+        }).catch(() => cached);
+        return cached || fetched;
+      })
+    )
   );
 });

@@ -1,17 +1,112 @@
 /**
  * Multi-language phonetic transcription engine.
- * Converts English, Finnish, and Russian words into Russian-letter pronunciation.
+ * Converts English and Finnish words into Russian-letter pronunciation.
  *
- * For English: dictionary + rule-based fallback.
- * For Finnish: rule-based (Finnish is very phonetic) + common word dictionary.
- * For Russian: already in Cyrillic, return as-is.
+ * For English: Free Dictionary API (IPA) → Russian letters, with cache + fallback rules.
+ * For Finnish: rule-based (Finnish is very phonetic).
  */
 
 // ============================================================
-// ENGLISH → Russian transcription dictionary
+// IPA → Russian letter converter
+// ============================================================
+const IPA_TO_RU = {
+  // Vowels
+  'iː': 'ии', 'i': 'и', 'ɪ': 'и', 'ɪː': 'ии',
+  'eɪ': 'эй', 'eː': 'ээ', 'e': 'э', 'ɛ': 'э',
+  'æ': 'э', 'ɑː': 'аа', 'ɑ': 'а', 'ɒ': 'о',
+  'ɔː': 'оо', 'ɔɪ': 'ой', 'ɔ': 'о',
+  'əʊ': 'оу', 'oʊ': 'оу', 'oː': 'оо', 'o': 'о',
+  'ʊ': 'у', 'uː': 'уу', 'u': 'у',
+  'ʌ': 'а', 'ɜː': 'ёр', 'ɜ': 'ё',
+  'ə': 'э', 'aɪ': 'ай', 'aʊ': 'ау',
+  'ɪə': 'иэ', 'eə': 'эа', 'ʊə': 'уэ',
+  'a': 'а',
+  // Consonants
+  'p': 'п', 'b': 'б', 't': 'т', 'd': 'д',
+  'k': 'к', 'ɡ': 'г', 'g': 'г',
+  'f': 'ф', 'v': 'в',
+  'θ': 'с', 'ð': 'з',
+  's': 'с', 'z': 'з',
+  'ʃ': 'ш', 'ʒ': 'ж',
+  'tʃ': 'ч', 'dʒ': 'дж',
+  'h': 'х',
+  'm': 'м', 'n': 'н', 'ŋ': 'нг',
+  'l': 'л', 'ɫ': 'л',
+  'ɹ': 'р', 'r': 'р', 'ɾ': 'р',
+  'j': 'й', 'w': 'в',
+  'x': 'кс',
+  // Stress/length marks (skip)
+  'ˈ': '', 'ˌ': '', 'ː': '', '.': '', '/': '', ',': '', ' ': ' ',
+};
+
+// Sort keys by length descending so longer patterns match first
+const IPA_KEYS = Object.keys(IPA_TO_RU).sort((a, b) => b.length - a.length);
+
+function ipaToRussian(ipa) {
+  if (!ipa) return '';
+  // Clean IPA string
+  let clean = ipa.replace(/^[\[\/]|[\]\/]$/g, '').trim();
+  let result = '';
+  let i = 0;
+  while (i < clean.length) {
+    let matched = false;
+    for (const key of IPA_KEYS) {
+      if (clean.substring(i, i + key.length) === key) {
+        result += IPA_TO_RU[key];
+        i += key.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Skip unknown characters
+      i++;
+    }
+  }
+  return result;
+}
+
+// ============================================================
+// API cache
+// ============================================================
+const _apiCache = {};
+
+async function fetchPhonetic(word) {
+  const lower = word.toLowerCase();
+  if (_apiCache[lower] !== undefined) return _apiCache[lower];
+
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lower)}`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!res.ok) {
+      _apiCache[lower] = null;
+      return null;
+    }
+    const data = await res.json();
+    if (Array.isArray(data) && data[0]) {
+      // Try to find phonetic text
+      let phonetic = data[0].phonetic || '';
+      if (!phonetic && data[0].phonetics) {
+        for (const p of data[0].phonetics) {
+          if (p.text) { phonetic = p.text; break; }
+        }
+      }
+      const result = phonetic || null;
+      _apiCache[lower] = result;
+      return result;
+    }
+  } catch {
+    // Network error — don't cache, allow retry
+  }
+  _apiCache[lower] = null;
+  return null;
+}
+
+// ============================================================
+// ENGLISH → Russian transcription dictionary (common words)
 // ============================================================
 const EN_TRANSCRIPTION = {
-  // Common words
   "a": "э", "the": "зэ", "is": "из", "are": "ар", "am": "эм",
   "was": "воз", "were": "вёр", "be": "би", "been": "бин", "being": "биинг",
   "have": "хэв", "has": "хэз", "had": "хэд",
@@ -19,8 +114,6 @@ const EN_TRANSCRIPTION = {
   "will": "вил", "would": "вуд", "shall": "шэл", "should": "шуд",
   "can": "кэн", "could": "куд", "may": "мэй", "might": "майт",
   "must": "маст", "need": "нид", "dare": "дэр", "ought": "от",
-
-  // Pronouns
   "i": "ай", "you": "ю", "he": "хи", "she": "ши", "it": "ит",
   "we": "ви", "they": "зэй", "me": "ми", "him": "хим", "her": "хёр",
   "us": "ас", "them": "зэм", "my": "май", "your": "ёр", "his": "хиз",
@@ -29,8 +122,6 @@ const EN_TRANSCRIPTION = {
   "who": "ху", "whom": "хум", "whose": "хуз",
   "what": "вот", "which": "вич", "where": "вэр", "when": "вэн",
   "why": "вай", "how": "хау",
-
-  // Prepositions
   "in": "ин", "on": "он", "at": "эт", "to": "ту", "for": "фор",
   "with": "виз", "from": "фром", "by": "бай", "about": "эбаут",
   "into": "инту", "through": "сру", "during": "дюринг",
@@ -38,13 +129,9 @@ const EN_TRANSCRIPTION = {
   "below": "билоу", "between": "битвин", "under": "андер",
   "over": "оувер", "out": "аут", "up": "ап", "down": "даун",
   "off": "оф", "of": "ов",
-
-  // Conjunctions
   "and": "энд", "or": "ор", "but": "бат", "if": "иф",
   "because": "бикоз", "so": "соу", "than": "зэн", "while": "вайл",
   "although": "олзоу", "since": "синс", "until": "антил",
-
-  // Common verbs
   "go": "гоу", "going": "гоуинг", "gone": "гон", "went": "вэнт",
   "come": "кам", "coming": "каминг", "came": "кэйм",
   "get": "гет", "getting": "гетинг", "got": "гот",
@@ -78,8 +165,6 @@ const EN_TRANSCRIPTION = {
   "understand": "андерстэнд", "wait": "вэйт",
   "build": "билд", "built": "билт", "break": "брэйк", "broke": "броук",
   "grow": "гроу", "grew": "грю",
-
-  // Common nouns
   "time": "тайм", "year": "йир", "people": "пипл", "way": "вэй",
   "day": "дэй", "man": "мэн", "woman": "вумэн",
   "child": "чайлд", "children": "чилдрен", "world": "ворлд",
@@ -101,8 +186,6 @@ const EN_TRANSCRIPTION = {
   "everyone": "эвриван", "someone": "самван", "problem": "проблем",
   "idea": "айдиа", "movie": "муви", "brother": "бразер",
   "sister": "систер", "teacher": "тичер", "student": "стюдент",
-
-  // Adjectives
   "good": "гуд", "bad": "бэд", "new": "нью", "old": "оулд",
   "great": "грэйт", "big": "биг", "small": "смол", "long": "лонг",
   "little": "литл", "young": "янг", "right": "райт", "wrong": "ронг",
@@ -121,8 +204,6 @@ const EN_TRANSCRIPTION = {
   "strong": "стронг", "full": "фул", "empty": "эмпти",
   "pretty": "прити", "enough": "инаф",
   "interesting": "интрэстинг", "amazing": "эмэйзинг",
-
-  // Adverbs & misc
   "not": "нот", "no": "ноу", "yes": "йес", "very": "вэри",
   "also": "олсоу", "just": "джаст", "more": "мор", "less": "лэс",
   "now": "нау", "then": "зэн", "here": "хир", "there": "зэр",
@@ -133,19 +214,12 @@ const EN_TRANSCRIPTION = {
   "away": "эвэй", "back": "бэк", "maybe": "мэйби",
   "please": "плиз", "thank": "сэнк", "thanks": "сэнкс",
   "okay": "окэй", "ok": "окэй", "together": "тугэзер",
-
-  // Greetings
   "hello": "хэлоу", "hi": "хай", "hey": "хэй",
-  "goodbye": "гудбай", "bye": "бай", "welcome": "вэлкам",
-  "sir": "сёр",
-
-  // Numbers
+  "goodbye": "гудбай", "bye": "бай", "welcome": "вэлкам", "sir": "сёр",
   "one": "ван", "two": "ту", "three": "сри", "four": "фор",
   "five": "файв", "six": "сикс", "seven": "сэвен", "eight": "эйт",
   "nine": "найн", "ten": "тэн", "hundred": "хандред",
   "thousand": "саузэнд", "million": "мильен",
-
-  // Tech / gaming
   "internet": "интернет", "online": "онлайн", "website": "вэбсайт",
   "video": "видео", "message": "мэседж", "password": "пассворд",
   "update": "апдэйт", "download": "даунлоуд", "server": "сёрвер",
@@ -157,28 +231,23 @@ const EN_TRANSCRIPTION = {
 };
 
 // ============================================================
-// FINNISH → Russian transcription dictionary (common words)
+// FINNISH → Russian transcription dictionary
 // ============================================================
 const FI_TRANSCRIPTION = {
-  // Greetings / basics
   "hei": "хэй", "moi": "мой", "terve": "тэрвэ", "moikka": "мойкка",
   "kiitos": "киитос", "ole": "олэ", "hyvä": "хювя",
   "hyvää": "хювяя", "huomenta": "хуомэнта", "päivää": "пяйвяя",
   "iltaa": "илтаа", "yötä": "юётя",
   "anteeksi": "антээкси", "näkemiin": "някэмиин",
-  "heippa": "хэйппа", "hei hei": "хэй хэй",
-
-  // Pronouns
+  "heippa": "хэйппа",
   "minä": "миня", "mä": "мя", "sinä": "синя", "sä": "ся",
   "hän": "хян", "me": "мэ", "te": "тэ", "he": "хэ",
   "se": "сэ", "ne": "нэ", "tämä": "тямя", "tuo": "туо",
   "mikä": "микя", "kuka": "кука",
-
-  // Common verbs
   "olla": "олла", "olen": "олэн", "olet": "олэт", "on": "он",
   "olemme": "олэммэ", "olette": "олэттэ", "ovat": "оват",
   "mennä": "мэння", "tulla": "тулла", "tehdä": "тэхдя",
-  "sanoa": "саноа", "saada": "сааdа", "voida": "войда",
+  "sanoa": "саноа", "voida": "войда",
   "pitää": "питяя", "haluta": "халута", "tietää": "тиэтяя",
   "nähdä": "няхдя", "antaa": "антаа", "ottaa": "оттаа",
   "käyttää": "кяюттяя", "puhua": "пухуа", "lukea": "лукэа",
@@ -188,10 +257,8 @@ const FI_TRANSCRIPTION = {
   "oppia": "оппиа", "opiskella": "опискэлла",
   "asua": "асуа", "rakastaa": "ракастаа",
   "ymmärtää": "юммяртяя",
-
-  // Common nouns
   "päivä": "пяйвя", "yö": "юё", "aamu": "ааму", "ilta": "илта",
-  "aika": "айка", "vuosi": "вуоси", "kuukausi": "кууkауси",
+  "aika": "айка", "vuosi": "вуоси",
   "viikko": "виикко", "tunti": "тунти",
   "ihminen": "ихминэн", "mies": "миэс", "nainen": "найнэн",
   "lapsi": "лапси", "perhe": "пэрхэ",
@@ -200,14 +267,12 @@ const FI_TRANSCRIPTION = {
   "koulu": "коулу", "työ": "тюё", "koti": "коти", "talo": "тало",
   "huone": "хуонэ", "kaupunki": "каупунки", "maa": "маа",
   "vesi": "вэси", "ruoka": "руока", "auto": "ауто",
-  "koira": "кoйра", "kissa": "кисса", "kirja": "кирья",
+  "koira": "койра", "kissa": "кисса", "kirja": "кирья",
   "puhelin": "пухэлин", "peli": "пэли",
   "raha": "раха", "nimi": "ними", "sana": "сана",
   "kieli": "киэли", "suomi": "суоми",
   "englanti": "энгланти", "venäjä": "вэняйя",
-
-  // Adjectives
-  "hyvä": "хювя", "huono": "хуоно", "iso": "исо", "pieni": "пиэни",
+  "iso": "исо", "pieni": "пиэни",
   "uusi": "ууси", "vanha": "ванха", "nuori": "нуори",
   "pitkä": "питкя", "lyhyt": "люхют",
   "kaunis": "каунис", "ruma": "рума",
@@ -218,20 +283,14 @@ const FI_TRANSCRIPTION = {
   "punainen": "пунайнэн", "sininen": "сининэн",
   "vihreä": "вихрэя", "keltainen": "кэлтайнэн",
   "iloinen": "илойнэн", "surullinen": "суруллинэн",
-
-  // Numbers
   "yksi": "юкси", "kaksi": "какси", "kolme": "колмэ",
   "neljä": "нэлья", "viisi": "вииси", "kuusi": "кууси",
   "seitsemän": "сэйтсэмян", "kahdeksan": "кахдэксан",
   "yhdeksän": "юхдэксян", "kymmenen": "кюммэнэн",
   "sata": "сата", "tuhat": "тухат", "miljoona": "мильёона",
-
-  // Question words
   "mitä": "митя", "missä": "мисся", "mihin": "михин",
   "milloin": "миллойн", "miksi": "микси", "miten": "митэн",
   "kuinka": "куинка", "paljonko": "пальёнко",
-
-  // Common adverbs
   "kyllä": "кюлля", "ei": "эй", "ehkä": "эхкя",
   "nyt": "нют", "tänään": "тяняян", "huomenna": "хуомэнна",
   "eilen": "эйлэн", "aina": "айна", "usein": "усэйн",
@@ -240,17 +299,10 @@ const FI_TRANSCRIPTION = {
   "hyvin": "хювин", "paljon": "пальён", "vähän": "вяхян",
   "myös": "мюёс", "vain": "вайн", "jo": "ёо",
   "vielä": "виэля", "taas": "таас",
-  "kiitos": "киитос", "ole hyvä": "олэ хювя",
-
-  // Phrases
-  "minun nimeni on": "минун нимэни он",
-  "puhutko englantia": "пухутко энглантиа",
-  "en ymmärrä": "эн юммярря",
-  "en puhu suomea": "эн пуху суомэа",
 };
 
 // ============================================================
-// ENGLISH word translations (for breakdown)
+// Word translation dictionaries (for breakdown)
 // ============================================================
 const EN_WORD_TRANSLATIONS = {
   "hello": { "ru": "привет", "fi": "hei" },
@@ -350,7 +402,6 @@ const EN_WORD_TRANSLATIONS = {
   "welcome": { "ru": "добро пожаловать", "fi": "tervetuloa" },
 };
 
-// Finnish word translations (for breakdown)
 const FI_WORD_TRANSLATIONS = {
   "hei": { "ru": "привет", "en": "hello" },
   "moi": { "ru": "привет", "en": "hi" },
@@ -433,7 +484,6 @@ const FI_WORD_TRANSLATIONS = {
   "näkemiin": { "ru": "до свидания", "en": "goodbye" },
 };
 
-// Russian word translations (for breakdown)
 const RU_WORD_TRANSLATIONS = {
   "привет": { "en": "hello", "fi": "hei" },
   "здравствуйте": { "en": "hello (formal)", "fi": "hyvää päivää" },
@@ -515,25 +565,19 @@ const RU_WORD_TRANSLATIONS = {
 };
 
 // ============================================================
-// Rule-based transcription engines
+// Rule-based transcription engines (fallback)
 // ============================================================
 
-/**
- * English → Russian (rule-based fallback)
- */
 function transcribeEnByRules(word) {
   const w = word.toLowerCase();
   let result = "";
   let i = 0;
-
   while (i < w.length) {
     const rest = w.substring(i);
     const c = w[i];
     const next = w[i + 1] || "";
     const next2 = w[i + 2] || "";
     const prev = w[i - 1] || "";
-
-    // Multi-char patterns
     if (rest.startsWith("tion")) { result += "шен"; i += 4; continue; }
     if (rest.startsWith("sion")) { result += "жен"; i += 4; continue; }
     if (rest.startsWith("ight")) { result += "айт"; i += 4; continue; }
@@ -579,7 +623,6 @@ function transcribeEnByRules(word) {
     if (rest.startsWith("ew")) { result += "ю"; i += 2; continue; }
     if (rest.startsWith("ue")) { result += "у"; i += 2; continue; }
     if (rest.startsWith("ui")) { result += "у"; i += 2; continue; }
-
     switch (c) {
       case "a":
         if (next === "e" || (i + 2 < w.length && w[i + 2] === "e" && !"aeiou".includes(next)))
@@ -633,21 +676,14 @@ function transcribeEnByRules(word) {
   return result;
 }
 
-/**
- * Finnish → Russian (rule-based).
- * Finnish is very phonetic, so rules cover almost everything.
- */
 function transcribeFiByRules(word) {
   const w = word.toLowerCase();
   let result = "";
   let i = 0;
-
   while (i < w.length) {
     const c = w[i];
     const next = w[i + 1] || "";
     const rest = w.substring(i);
-
-    // Double vowels (long)
     if (rest.startsWith("aa")) { result += "аа"; i += 2; continue; }
     if (rest.startsWith("ee")) { result += "ээ"; i += 2; continue; }
     if (rest.startsWith("ii")) { result += "ии"; i += 2; continue; }
@@ -656,8 +692,6 @@ function transcribeFiByRules(word) {
     if (rest.startsWith("yy")) { result += "юю"; i += 2; continue; }
     if (rest.startsWith("ää")) { result += "яя"; i += 2; continue; }
     if (rest.startsWith("öö")) { result += "ёё"; i += 2; continue; }
-
-    // Diphthongs
     if (rest.startsWith("ai")) { result += "ай"; i += 2; continue; }
     if (rest.startsWith("ei")) { result += "эй"; i += 2; continue; }
     if (rest.startsWith("oi")) { result += "ой"; i += 2; continue; }
@@ -675,20 +709,13 @@ function transcribeFiByRules(word) {
     if (rest.startsWith("ie")) { result += "иэ"; i += 2; continue; }
     if (rest.startsWith("uo")) { result += "уо"; i += 2; continue; }
     if (rest.startsWith("yö")) { result += "юё"; i += 2; continue; }
-
-    // Double consonants
     if (c === next && "bcdfghjklmnpqrstvwxz".includes(c)) {
-      // Double consonant = same sound but longer/geminate
       result += getFinConsonant(c) + getFinConsonant(c);
       i += 2;
       continue;
     }
-
-    // Special combos
     if (rest.startsWith("nk")) { result += "нк"; i += 2; continue; }
     if (rest.startsWith("ng")) { result += "нг"; i += 2; continue; }
-
-    // Single characters
     switch (c) {
       case "a": result += "а"; break;
       case "e": result += "э"; break;
@@ -698,8 +725,7 @@ function transcribeFiByRules(word) {
       case "y": result += "ю"; break;
       case "ä": result += "я"; break;
       case "ö": result += "ё"; break;
-      default:
-        result += getFinConsonant(c);
+      default: result += getFinConsonant(c);
     }
     i++;
   }
@@ -717,23 +743,29 @@ function getFinConsonant(c) {
 }
 
 // ============================================================
-// Public API
+// Public API (async for English API calls)
 // ============================================================
 
 /**
- * Get Russian transcription of a word in the given language.
+ * Get Russian transcription of a word (async for English API).
  */
-function getTranscription(word, lang) {
+async function getTranscription(word, lang) {
   const lower = word.toLowerCase().replace(/[^a-zäöüåéèêëàâîïôùûçñß'-]/g, "");
   if (!lower) return "";
 
-  if (lang === "ru") {
-    // Russian is already in Cyrillic — return as-is
-    return word.toLowerCase();
-  }
+  if (lang === "ru") return word.toLowerCase();
 
   if (lang === "en") {
-    return EN_TRANSCRIPTION[lower] || transcribeEnByRules(lower);
+    // 1) Check dictionary
+    if (EN_TRANSCRIPTION[lower]) return EN_TRANSCRIPTION[lower];
+    // 2) Try API → IPA → Russian
+    const ipa = await fetchPhonetic(lower);
+    if (ipa) {
+      const converted = ipaToRussian(ipa);
+      if (converted) return converted;
+    }
+    // 3) Fallback to rules
+    return transcribeEnByRules(lower);
   }
 
   if (lang === "fi") {
@@ -743,55 +775,41 @@ function getTranscription(word, lang) {
   return "";
 }
 
-/**
- * Get word translation for breakdown display.
- * Returns translation in the target language.
- */
 function getWordTranslation(word, fromLang, toLang) {
   const lower = word.toLowerCase();
-
-  if (fromLang === "en" && EN_WORD_TRANSLATIONS[lower]) {
-    return EN_WORD_TRANSLATIONS[lower][toLang] || null;
-  }
-  if (fromLang === "fi" && FI_WORD_TRANSLATIONS[lower]) {
-    return FI_WORD_TRANSLATIONS[lower][toLang] || null;
-  }
-  if (fromLang === "ru" && RU_WORD_TRANSLATIONS[lower]) {
-    return RU_WORD_TRANSLATIONS[lower][toLang] || null;
-  }
+  if (fromLang === "en" && EN_WORD_TRANSLATIONS[lower]) return EN_WORD_TRANSLATIONS[lower][toLang] || null;
+  if (fromLang === "fi" && FI_WORD_TRANSLATIONS[lower]) return FI_WORD_TRANSLATIONS[lower][toLang] || null;
+  if (fromLang === "ru" && RU_WORD_TRANSLATIONS[lower]) return RU_WORD_TRANSLATIONS[lower][toLang] || null;
   return null;
 }
 
 /**
- * Transcribe a full sentence.
+ * Transcribe a full sentence (async).
  */
-function transcribeSentence(text, lang) {
-  if (lang === "ru") return text; // Already Cyrillic
+async function transcribeSentence(text, lang) {
+  if (lang === "ru") return text;
 
   const wordPattern = lang === "fi"
     ? /([a-zA-ZäöåÄÖÅ]+)/g
     : /([a-zA-Z]+)/g;
 
   const parts = text.split(wordPattern);
-  return parts.map(token => {
+  const results = [];
+  for (const token of parts) {
     if (wordPattern.test(token)) {
-      wordPattern.lastIndex = 0; // reset regex state
-      return getTranscription(token, lang);
+      wordPattern.lastIndex = 0;
+      results.push(await getTranscription(token, lang));
+    } else {
+      results.push(token);
     }
-    return token;
-  }).join("");
+  }
+  return results.join("");
 }
 
-/**
- * Detect if text contains Cyrillic characters.
- */
 function isCyrillic(text) {
   return /[а-яА-ЯёЁ]/.test(text);
 }
 
-/**
- * Detect if text contains Finnish-specific characters.
- */
 function hasFinnishChars(text) {
   return /[äöåÄÖÅ]/.test(text);
 }
