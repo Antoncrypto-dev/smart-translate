@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <!--
+     ______                            __
+    / ____/___  ____ ___  ____  __  __/ /____  _____
+   / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+  / /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+  \____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                      /_/
+          Created with Perplexity Computer
+          https://www.perplexity.ai/computer
+  -->
+  <meta name="generator" content="Perplexity Computer">
+  <meta name="author" content="Perplexity Computer">
+  <meta property="og:see_also" content="https://www.perplexity.ai/computer">
+  <link rel="author" href="https://www.perplexity.ai/computer">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+  <meta name="theme-color" content="#0b0f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Translate">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Умный переводчик EN ↔ RU ↔ FI с транскрипцией произношения">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+
+  <title>Smart Translate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-glow" aria-hidden="true">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+  </div>
+
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="header anim-fade" style="--delay:0">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5h7M7.5 2v10M3.5 10c1.5-2.5 3-3.5 4-3.5s2.5 1 4 3.5"/>
+            <path d="M14 5l3.5 10M17.5 5L21 15M15 12.5h5"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- Language Picker -->
+    <div class="lang-picker anim-fade" style="--delay:1">
+      <div class="lang-group">
+        <button class="lang-chip active" data-from="en"><span class="chip-code">EN</span><span class="chip-label">English</span></button>
+        <button class="lang-chip" data-from="ru"><span class="chip-code">RU</span><span class="chip-label">Русский</span></button>
+        <button class="lang-chip" data-from="fi"><span class="chip-code">FI</span><span class="chip-label">Suomi</span></button>
+      </div>
+      <button id="btn-swap" class="swap-btn" aria-label="Поменять языки">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 16V4m0 12l-3-3m3 3l3-3"/>
+          <path d="M17 8v12m0-12l3 3m-3-3l-3 3"/>
+        </svg>
+      </button>
+      <div class="lang-group">
+        <button class="lang-chip active" data-to="ru"><span class="chip-code">RU</span><span class="chip-label">Русский</span></button>
+        <button class="lang-chip" data-to="en"><span class="chip-code">EN</span><span class="chip-label">English</span></button>
+        <button class="lang-chip" data-to="fi"><span class="chip-code">FI</span><span class="chip-label">Suomi</span></button>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="glass-card input-card anim-fade" style="--delay:2">
+      <textarea id="input" class="input-area" placeholder="Введи текст..." rows="3"></textarea>
+      <div class="input-bar">
+        <span id="counter" class="counter">0</span>
+        <div class="input-btns">
+          <button id="btn-voice" class="icon-btn" title="Произнести">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+          </button>
+          <button id="btn-clear" class="icon-btn" title="Очистить">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Translate button -->
+    <button id="btn-translate" class="translate-btn anim-fade" style="--delay:3">
+      <div class="btn-shine"></div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <span>Перевести</span>
+    </button>
+
+    <!-- Loading -->
+    <div id="loading" class="loading hidden">
+      <div class="loader"><div></div><div></div><div></div></div>
+      <span>Переводим...</span>
+    </div>
+
+    <!-- Error -->
+    <div id="error" class="error-box hidden"></div>
+
+    <!-- Results -->
+    <div id="results" class="results hidden">
+      <div class="glass-card result-card slide-up" style="--d:0">
+        <div class="card-top">
+          <span class="card-tag">Перевод</span>
+          <div class="card-btns">
+            <button id="btn-speak-result" class="icon-btn-sm" title="Произнести"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg></button>
+            <button id="btn-copy" class="icon-btn-sm" title="Копировать"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+          </div>
+        </div>
+        <p id="translation" class="translation-text"></p>
+      </div>
+
+      <div id="transcription-card" class="glass-card accent-card slide-up" style="--d:1">
+        <span id="trans-label" class="card-tag">Транскрипция</span>
+        <p id="transcription" class="transcription-text"></p>
+      </div>
+
+      <div id="breakdown-card" class="glass-card slide-up" style="--d:2">
+        <span class="card-tag">Разбор по словам</span>
+        <div id="words" class="words-grid"></div>
+      </div>
+    </div>
+
+    <!-- Install prompt (iOS) -->
+    <div id="install-hint" class="install-hint hidden">
+      <div class="install-content">
+        <span class="install-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </span>
+        <p>Добавь на домашний экран: нажми <strong>Поделиться</strong> → <strong>На экран «Домой»</strong></p>
+        <button id="install-close" class="install-close">&times;</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+    </footer>
+  </div>
+
+  <script src="transcription.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
