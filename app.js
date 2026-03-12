@@ -1,49 +1,3 @@
-// ===== Language Registry =====
-const LANGUAGES = [
-  // Popular (top section)
-  { code: 'en', name: 'English', flag: '🇬🇧', popular: true },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺', popular: true },
-  { code: 'fi', name: 'Suomi', flag: '🇫🇮', popular: true },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪', popular: true },
-  { code: 'fr', name: 'Français', flag: '🇫🇷', popular: true },
-  { code: 'es', name: 'Español', flag: '🇪🇸', popular: true },
-  // More languages
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', name: 'Português', flag: '🇵🇹' },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
-  { code: 'pl', name: 'Polski', flag: '🇵🇱' },
-  { code: 'uk', name: 'Українська', flag: '🇺🇦' },
-  { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
-  { code: 'sv', name: 'Svenska', flag: '🇸🇪' },
-  { code: 'da', name: 'Dansk', flag: '🇩🇰' },
-  { code: 'no', name: 'Norsk', flag: '🇳🇴' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵' },
-  { code: 'ko', name: '한국어', flag: '🇰🇷' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
-  { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
-  { code: 'hu', name: 'Magyar', flag: '🇭🇺' },
-  { code: 'ro', name: 'Română', flag: '🇷🇴' },
-  { code: 'bg', name: 'Български', flag: '🇧🇬' },
-  { code: 'hr', name: 'Hrvatski', flag: '🇭🇷' },
-  { code: 'sk', name: 'Slovenčina', flag: '🇸🇰' },
-  { code: 'et', name: 'Eesti', flag: '🇪🇪' },
-  { code: 'lv', name: 'Latviešu', flag: '🇱🇻' },
-  { code: 'lt', name: 'Lietuvių', flag: '🇱🇹' },
-  { code: 'th', name: 'ไทย', flag: '🇹🇭' },
-  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
-  { code: 'ms', name: 'Bahasa Melayu', flag: '🇲🇾' },
-  { code: 'he', name: 'עברית', flag: '🇮🇱' },
-  { code: 'ka', name: 'ქართული', flag: '🇬🇪' },
-];
-
-function getLang(code) {
-  return LANGUAGES.find(l => l.code === code) || { code, name: code.toUpperCase(), flag: '🌐' };
-}
-
 // ===== State =====
 let langFrom = 'en';
 let langTo = 'ru';
@@ -73,125 +27,38 @@ const transLabel = $('#trans-label');
 const wordsEl = $('#words');
 const breakdownCard = $('#breakdown-card');
 
-const langFromBtn = $('#lang-from-btn');
-const langToBtn = $('#lang-to-btn');
-const dropdownFrom = $('#dropdown-from');
-const dropdownTo = $('#dropdown-to');
-const flagFrom = $('#flag-from');
-const nameFrom = $('#name-from');
-const flagTo = $('#flag-to');
-const nameTo = $('#name-to');
-
-// ===== Language Dropdown =====
-function buildDropdown(container, selectedCode, otherCode, onSelect) {
-  container.innerHTML = '';
-  const popular = LANGUAGES.filter(l => l.popular);
-  const rest = LANGUAGES.filter(l => !l.popular);
-
-  function addOption(lang) {
-    const btn = document.createElement('button');
-    btn.className = 'lang-option' + (lang.code === selectedCode ? ' active' : '');
-    if (lang.code === otherCode) btn.style.opacity = '0.4';
-    btn.innerHTML = `<span class="opt-flag">${lang.flag}</span><span class="opt-name">${lang.name}</span><span class="opt-code">${lang.code}</span>`;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onSelect(lang.code);
+// ===== Language Picker =====
+function setupLangPicker() {
+  $$('[data-from]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      langFrom = btn.dataset.from;
+      $$('[data-from]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (langFrom === langTo) {
+        const other = ['en','ru','fi'].filter(l => l !== langFrom);
+        langTo = other[0];
+        $$('[data-to]').forEach(b => b.classList.toggle('active', b.dataset.to === langTo));
+      }
+      updatePlaceholder();
     });
-    container.appendChild(btn);
-  }
-
-  popular.forEach(addOption);
-
-  if (rest.length) {
-    const div = document.createElement('div');
-    div.className = 'lang-divider';
-    container.appendChild(div);
-    rest.forEach(addOption);
-  }
-}
-
-function updateLangUI() {
-  const from = getLang(langFrom);
-  const to = getLang(langTo);
-  flagFrom.textContent = from.flag;
-  nameFrom.textContent = from.name;
-  flagTo.textContent = to.flag;
-  nameTo.textContent = to.name;
-  updatePlaceholder();
-}
-
-function openDropdown(btnEl, dropdownEl, isFrom) {
-  // Close any other open dropdown
-  closeAllDropdowns();
-
-  const selected = isFrom ? langFrom : langTo;
-  const other = isFrom ? langTo : langFrom;
-
-  buildDropdown(dropdownEl, selected, other, (code) => {
-    if (isFrom) {
-      if (code === langTo) { langTo = langFrom; }
-      langFrom = code;
-    } else {
-      if (code === langFrom) { langFrom = langTo; }
-      langTo = code;
-    }
-    updateLangUI();
-    closeAllDropdowns();
   });
 
-  dropdownEl.classList.remove('hidden');
-  btnEl.classList.add('open');
-
-  // Overlay to catch outside clicks
-  const overlay = document.createElement('div');
-  overlay.className = 'lang-overlay';
-  overlay.addEventListener('click', closeAllDropdowns);
-  document.body.appendChild(overlay);
+  $$('[data-to]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      langTo = btn.dataset.to;
+      $$('[data-to]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (langFrom === langTo) {
+        const other = ['en','ru','fi'].filter(l => l !== langTo);
+        langFrom = other[0];
+        $$('[data-from]').forEach(b => b.classList.toggle('active', b.dataset.from === langFrom));
+      }
+      updatePlaceholder();
+    });
+  });
 }
 
-function closeAllDropdowns() {
-  dropdownFrom.classList.add('hidden');
-  dropdownTo.classList.add('hidden');
-  langFromBtn.classList.remove('open');
-  langToBtn.classList.remove('open');
-  document.querySelectorAll('.lang-overlay').forEach(el => el.remove());
-}
-
-langFromBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (!dropdownFrom.classList.contains('hidden')) {
-    closeAllDropdowns();
-  } else {
-    openDropdown(langFromBtn, dropdownFrom, true);
-  }
-});
-
-langToBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (!dropdownTo.classList.contains('hidden')) {
-    closeAllDropdowns();
-  } else {
-    openDropdown(langToBtn, dropdownTo, false);
-  }
-});
-
-const placeholders = {
-  en: 'Type in English...',
-  ru: 'Введи на русском...',
-  fi: 'Kirjoita suomeksi...',
-  de: 'Auf Deutsch schreiben...',
-  fr: 'Écrire en français...',
-  es: 'Escribe en español...',
-  it: 'Scrivi in italiano...',
-  pt: 'Escreva em português...',
-  ja: '日本語で入力...',
-  ko: '한국어로 입력...',
-  zh: '用中文输入...',
-  ar: 'اكتب بالعربية...',
-  tr: 'Türkçe yazın...',
-  uk: 'Напишіть українською...',
-  pl: 'Pisz po polsku...',
-};
+const placeholders = { en: 'Type in English...', ru: 'Введи на русском...', fi: 'Kirjoita suomeksi...' };
 
 function updatePlaceholder() {
   input.placeholder = placeholders[langFrom] || 'Введи текст...';
@@ -202,13 +69,16 @@ btnSwap.addEventListener('click', () => {
   const tmp = langFrom;
   langFrom = langTo;
   langTo = tmp;
-  updateLangUI();
+
+  $$('[data-from]').forEach(b => b.classList.toggle('active', b.dataset.from === langFrom));
+  $$('[data-to]').forEach(b => b.classList.toggle('active', b.dataset.to === langTo));
 
   const translated = translationEl.textContent;
   if (translated && !results.classList.contains('hidden')) {
     input.value = translated;
     counter.textContent = translated.length;
   }
+  updatePlaceholder();
 
   // spin animation
   btnSwap.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
@@ -234,14 +104,7 @@ btnClear.addEventListener('click', () => {
 });
 
 // ===== TTS (Text-to-Speech) =====
-const langTTS = {
-  en:'en-US', ru:'ru-RU', fi:'fi-FI', de:'de-DE', fr:'fr-FR', es:'es-ES',
-  it:'it-IT', pt:'pt-PT', nl:'nl-NL', pl:'pl-PL', uk:'uk-UA', cs:'cs-CZ',
-  sv:'sv-SE', da:'da-DK', no:'nb-NO', ja:'ja-JP', ko:'ko-KR', zh:'zh-CN',
-  ar:'ar-SA', hi:'hi-IN', tr:'tr-TR', el:'el-GR', hu:'hu-HU', ro:'ro-RO',
-  bg:'bg-BG', hr:'hr-HR', sk:'sk-SK', et:'et-EE', lv:'lv-LV', lt:'lt-LT',
-  th:'th-TH', vi:'vi-VN', id:'id-ID', ms:'ms-MY', he:'he-IL', ka:'ka-GE',
-};
+const langTTS = { en: 'en-US', ru: 'ru-RU', fi: 'fi-FI' };
 
 function speak(text, lang) {
   if (!('speechSynthesis' in window) || !text) return;
@@ -314,7 +177,8 @@ function startListening() {
     return;
   }
 
-  recognition.lang = langTTS[langFrom] || 'en-US';
+  const sttLang = { en: 'en-US', ru: 'ru-RU', fi: 'fi-FI' };
+  recognition.lang = sttLang[langFrom] || 'en-US';
 
   try {
     recognition.start();
@@ -375,7 +239,7 @@ btnCopy.addEventListener('click', async () => {
   setTimeout(() => btnCopy.classList.remove('copied'), 600);
 });
 
-// ===== Translation API (Lingva Translate — free, unlimited) =====
+// ===== Translation API (Lingva Translate — primary, MyMemory — fallback) =====
 const LINGVA_INSTANCES = [
   'https://lingva.ml',
   'https://translate.plausibility.cloud',
@@ -424,38 +288,23 @@ async function handleTranslate() {
 
     let transText = '';
     let label = '';
-    const langNames = {
-      en: 'английского', fi: 'финского', ru: 'русского',
-      de: 'немецкого', fr: 'французского', es: 'испанского',
-      it: 'итальянского', pt: 'португальского', ja: 'японского',
-      ko: 'корейского', zh: 'китайского', ar: 'арабского',
-      tr: 'турецкого', uk: 'украинского', pl: 'польского',
-      nl: 'голландского', sv: 'шведского', da: 'датского',
-      no: 'норвежского', cs: 'чешского', hu: 'венгерского',
-      el: 'греческого', ro: 'румынского', bg: 'болгарского',
-      hr: 'хорватского', sk: 'словацкого', et: 'эстонского',
-      lv: 'латышского', lt: 'литовского', hi: 'хинди',
-      th: 'тайского', vi: 'вьетнамского', id: 'индонезийского',
-      ms: 'малайского', he: 'иврита', ka: 'грузинского',
-    };
+    const langNames = { en: 'английского', fi: 'финского', ru: 'русского' };
 
-    // Only show transcription if enabled and we support the language
-    const supportsTranscription = transcriptionEnabled && (['en', 'fi'].includes(langFrom) || ['en', 'fi'].includes(langTo));
-
-    if (supportsTranscription) {
-      if (['en', 'fi'].includes(langFrom)) {
-        transText = await TE.transcribeSentence(text, langFrom);
-        label = `Произношение ${langNames[langFrom] || langFrom}`;
-      } else if (['en', 'fi'].includes(langTo)) {
+    if (transcriptionEnabled) {
+      if (langFrom === 'ru') {
         transText = await TE.transcribeSentence(result, langTo);
-        label = `Произношение ${langNames[langTo] || langTo}`;
+        label = `Произношение ${langNames[langTo]}`;
+      } else {
+        transText = await TE.transcribeSentence(text, langFrom);
+        label = `Произношение ${langNames[langFrom]}`;
       }
     }
 
     translationEl.textContent = result;
     transLabel.textContent = label;
 
-    if (transText) {
+    const showTranscription = transcriptionEnabled && (langFrom !== 'ru' || langTo !== 'ru') && transText;
+    if (showTranscription) {
       transcriptionEl.textContent = `[ ${transText} ]`;
       transcriptionCard.classList.remove('hidden');
     } else {
@@ -482,13 +331,10 @@ async function handleTranslate() {
 
 // ===== Word Breakdown =====
 async function buildBreakdown(text, from, to) {
-  const isCyrillic = /[а-яА-ЯёЁ]/.test(text);
-  const isFinnish = /[äöåÄÖÅ]/.test(text);
-
   let wordList;
-  if (isCyrillic) wordList = text.match(/[а-яА-ЯёЁ]+/g);
-  else if (isFinnish) wordList = text.match(/[a-zA-ZäöåÄÖÅ]+/g);
-  else wordList = text.match(/[a-zA-Z\u00C0-\u024F]+/g);
+  if (from === 'ru') wordList = text.match(/[а-яА-ЯёЁ]+/g);
+  else if (from === 'fi') wordList = text.match(/[a-zA-ZäöåÄÖÅ]+/g);
+  else wordList = text.match(/[a-zA-Z]+/g);
 
   if (!wordList || wordList.length === 0) { breakdownCard.classList.add('hidden'); return; }
 
@@ -501,7 +347,6 @@ async function buildBreakdown(text, from, to) {
 
   wordsEl.innerHTML = '';
   const TE = window.TranscriptionEngine;
-  const supportsTranscription = transcriptionEnabled && ['en', 'fi'].includes(from);
 
   for (let i = 0; i < unique.length; i++) {
     const word = unique[i];
@@ -511,7 +356,7 @@ async function buildBreakdown(text, from, to) {
 
     let html = `<span class="w-orig">${esc(word)}</span>`;
 
-    if (supportsTranscription) {
+    if (transcriptionEnabled && from !== 'ru') {
       const tr = await TE.getTranscription(word, from);
       if (tr) html += `<span class="w-trans">[${esc(tr)}]</span>`;
     }
@@ -575,6 +420,6 @@ if (toggleBtn) {
 }
 
 // ===== Init =====
-updateLangUI();
+setupLangPicker();
 updatePlaceholder();
 input.focus();
