@@ -36,7 +36,6 @@ const transToggleText = $('#trans-toggle-text');
 const autodetectHint = $('#autodetect-hint');
 const autodetectText = $('#autodetect-text');
 const btnAutodetect = $('#btn-autodetect');
-const autodetectLabel = $('#autodetect-label');
 
 // ===== Language Data =====
 const LANGS = {

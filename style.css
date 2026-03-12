@@ -115,16 +115,16 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .icon-btn-sm:hover::before{opacity:.08}
 .icon-btn-sm:active{transform:scale(.85);color:var(--primary)}.icon-btn-sm:active::before{opacity:.12}
 
-/* ===== Action Row (Auto-detect + Translate) ===== */
-.action-row{display:flex;gap:8px;align-items:stretch}
-
-/* Auto-detect toggle button */
-.autodetect-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 14px;border-radius:var(--r-full);border:1.5px solid var(--border-hi);background:var(--surface);color:var(--text-3);font-size:.72rem;font-weight:600;white-space:nowrap;transition:all .3s var(--md-ease);flex-shrink:0;position:relative;overflow:hidden}
-.autodetect-btn::before{content:'';position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .2s;pointer-events:none}
-.autodetect-btn:hover::before{opacity:.06}
-.autodetect-btn:active{transform:scale(.95)}
-.autodetect-btn.active{border-color:var(--primary-dim);background:var(--primary-container);color:var(--primary)}
-.autodetect-btn.active svg{color:var(--primary)}
+/* ===== Auto-detect Chip (compact toggle below translate) ===== */
+.autodetect-row{display:flex;justify-content:center}
+.autodetect-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-full);border:1.5px solid var(--border-hi);background:var(--surface);color:var(--text-3);font-size:.72rem;font-weight:600;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .3s var(--md-ease);position:relative;overflow:hidden;user-select:none}
+.autodetect-chip::before{content:'';position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .2s;pointer-events:none}
+.autodetect-chip:hover::before{opacity:.06}
+.autodetect-chip:active{transform:scale(.94)}
+.autodetect-chip.active{border-color:var(--primary-dim);background:var(--primary-container);color:var(--primary)}
+.autodetect-chip.active .autodetect-chip-icon{color:var(--primary)}
+.autodetect-chip-icon{flex-shrink:0;opacity:.7}
+.autodetect-chip.active .autodetect-chip-icon{opacity:1}
 
 /* ===== Translate Button (Material Filled Button) ===== */
 .translate-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 24px;border-radius:var(--r-full);background:linear-gradient(135deg,var(--primary-dim),var(--accent));color:#fff;font-weight:600;font-size:.9rem;box-shadow:var(--elevation-2);transition:all .35s var(--md-ease);position:relative;overflow:hidden;flex:1;min-width:0}
