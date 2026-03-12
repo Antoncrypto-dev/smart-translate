@@ -115,8 +115,19 @@ textarea{font:inherit;color:inherit;border:none;outline:none;background:none;res
 .icon-btn-sm:hover::before{opacity:.08}
 .icon-btn-sm:active{transform:scale(.85);color:var(--primary)}.icon-btn-sm:active::before{opacity:.12}
 
+/* ===== Action Row (Auto-detect + Translate) ===== */
+.action-row{display:flex;gap:8px;align-items:stretch}
+
+/* Auto-detect toggle button */
+.autodetect-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 14px;border-radius:var(--r-full);border:1.5px solid var(--border-hi);background:var(--surface);color:var(--text-3);font-size:.72rem;font-weight:600;white-space:nowrap;transition:all .3s var(--md-ease);flex-shrink:0;position:relative;overflow:hidden}
+.autodetect-btn::before{content:'';position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .2s;pointer-events:none}
+.autodetect-btn:hover::before{opacity:.06}
+.autodetect-btn:active{transform:scale(.95)}
+.autodetect-btn.active{border-color:var(--primary-dim);background:var(--primary-container);color:var(--primary)}
+.autodetect-btn.active svg{color:var(--primary)}
+
 /* ===== Translate Button (Material Filled Button) ===== */
-.translate-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 24px;border-radius:var(--r-full);background:linear-gradient(135deg,var(--primary-dim),var(--accent));color:#fff;font-weight:600;font-size:.9rem;box-shadow:var(--elevation-2);transition:all .35s var(--md-ease);position:relative;overflow:hidden}
+.translate-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 24px;border-radius:var(--r-full);background:linear-gradient(135deg,var(--primary-dim),var(--accent));color:#fff;font-weight:600;font-size:.9rem;box-shadow:var(--elevation-2);transition:all .35s var(--md-ease);position:relative;overflow:hidden;flex:1;min-width:0}
 .translate-btn:hover{box-shadow:var(--elevation-3);filter:brightness(1.05)}
 .translate-btn:active{transform:scale(.97);box-shadow:var(--elevation-1)}
 .btn-shine{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);animation:shine 3s ease-in-out infinite;pointer-events:none}

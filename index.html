@@ -123,12 +123,18 @@
       </div>
     </div>
 
-    <!-- Translate button -->
-    <button id="btn-translate" class="translate-btn anim-fade" style="--delay:3">
-      <div class="btn-shine"></div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      <span>Перевести</span>
-    </button>
+    <!-- Auto-detect toggle + Translate button -->
+    <div class="action-row anim-fade" style="--delay:3">
+      <button id="btn-autodetect" class="autodetect-btn active" aria-pressed="true" title="Автоопределение языка">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span id="autodetect-label">Авто</span>
+      </button>
+      <button id="btn-translate" class="translate-btn">
+        <div class="btn-shine"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span>Перевести</span>
+      </button>
+    </div>
 
     <!-- Auto-detect hint (shown when languages were swapped) -->
     <div id="autodetect-hint" class="autodetect-hint hidden">

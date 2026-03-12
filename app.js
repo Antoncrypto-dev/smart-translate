@@ -7,6 +7,7 @@ let transOpen = false;   // transcription panel visibility
 let lastTransLang = '';  // language for which we show transcription
 let lastOrigText = '';   // original text for transcription
 let lastTransResult = ''; // translated text
+let autoDetectEnabled = true; // auto-detect toggle
 
 // ===== DOM =====
 const $ = s => document.querySelector(s);
@@ -34,6 +35,8 @@ const btnToggleTrans = $('#btn-toggle-trans');
 const transToggleText = $('#trans-toggle-text');
 const autodetectHint = $('#autodetect-hint');
 const autodetectText = $('#autodetect-text');
+const btnAutodetect = $('#btn-autodetect');
+const autodetectLabel = $('#autodetect-label');
 
 // ===== Language Data =====
 const LANGS = {
@@ -44,29 +47,193 @@ const LANGS = {
 
 const placeholders = { en: 'Type in English...', ru: 'Введи на русском...', fi: 'Kirjoita suomeksi...' };
 
-// ===== Auto-detect language =====
+// ===== Smart Auto-detect (dictionary-based, between two selected languages only) =====
+
+// Common words for each language (high-frequency, unique to language)
+const LANG_WORDS = {
+  en: new Set([
+    // Articles, pronouns, prepositions — uniquely English
+    'the','a','an','is','are','am','was','were','been','being',
+    'have','has','had','do','does','did','will','would','shall','should',
+    'can','could','may','might','must','need','dare','ought',
+    'i','you','he','she','it','we','they','me','him','her',
+    'us','them','my','your','his','its','our','their',
+    'this','that','these','those','who','whom','whose',
+    'what','which','where','when','why','how',
+    'in','on','at','to','for','with','from','by','about',
+    'into','through','during','before','after','above',
+    'below','between','under','over','out','up','down','off','of',
+    'and','or','but','if','because','so','than','while',
+    'although','since','until','not','no','yes','very',
+    'also','just','more','less','now','then','here','there',
+    'well','still','only','really','already','always','never',
+    'sometimes','often','again','too','quite','almost',
+    'go','going','gone','went','come','coming','came',
+    'get','getting','got','make','making','made',
+    'know','knew','known','think','thought',
+    'take','took','taken','see','saw','seen',
+    'want','give','gave','given','tell','told','say','said',
+    'find','found','call','try','ask','work','working',
+    'play','playing','run','running','move','live','believe',
+    'write','wrote','written','read','learn','keep','let',
+    'begin','began','seem','help','show','hear','heard','turn',
+    'start','put','open','close','like','love','hate',
+    'eat','eating','drink','sleep','buy','bought','sell','sold',
+    'hello','goodbye','bye','welcome','please','thank','thanks','sorry',
+    'good','bad','new','old','great','big','small','long',
+    'little','young','right','wrong','high','low','large',
+    'first','last','next','different','important','same',
+    'every','each','many','much','few','other','best','better',
+    'beautiful','happy','time','world','life','people','way',
+    'day','man','woman','child','children','house','home',
+    'school','friend','family','book','game','water','food',
+    'money','name','city','country','door','car',
+  ]),
+  fi: new Set([
+    // Finnish words — many overlap Latin letters but are clearly Finnish
+    'hei','moi','terve','moikka','kiitos','ole','hyvä',
+    'hyvää','huomenta','päivää','iltaa','yötä',
+    'anteeksi','näkemiin','heippa',
+    'minä','mä','sinä','sä','hän','he','se','ne',
+    'tämä','tuo','mikä','kuka','mitä','missä','mihin',
+    'milloin','miksi','miten','kuinka','paljonko',
+    'olla','olen','olet','olemme','olette','ovat',
+    'mennä','tulla','tehdä','sanoa','voida',
+    'pitää','haluta','tietää','nähdä','antaa','ottaa',
+    'käyttää','puhua','lukea','kirjoittaa','syödä','juoda',
+    'nukkua','ostaa','myydä','ajaa','kävellä',
+    'oppia','opiskella','asua','rakastaa','ymmärtää',
+    'päivä','yö','aamu','ilta','aika','vuosi',
+    'viikko','tunti','ihminen','mies','nainen',
+    'lapsi','perhe','äiti','isä','veli','sisko',
+    'ystävä','kaveri','koulu','työ','koti','talo',
+    'huone','kaupunki','maa','vesi','ruoka','auto',
+    'koira','kissa','kirja','puhelin','peli',
+    'raha','nimi','sana','kieli','suomi',
+    'englanti','venäjä',
+    'iso','pieni','uusi','vanha','nuori','pitkä','lyhyt',
+    'kaunis','ruma','nopea','hidas','helppo','vaikea',
+    'kuuma','kylmä','lämmin',
+    'musta','valkoinen','punainen','sininen','vihreä','keltainen',
+    'iloinen','surullinen',
+    'yksi','kaksi','kolme','neljä','viisi','kuusi',
+    'seitsemän','kahdeksan','yhdeksän','kymmenen',
+    'sata','tuhat','miljoona',
+    'kyllä','ei','ehkä','nyt','tänään','huomenna',
+    'eilen','aina','usein','joskus','harvoin',
+    'täällä','siellä','hyvin','paljon','vähän',
+    'myös','vain','jo','vielä','taas',
+    'ja','tai','mutta','koska','kun','jos','että',
+    'kanssa','ilman','ennen','jälkeen',
+    'meidän','teidän','heidän','minun','sinun','hänen',
+    'meillä','teillä','heillä','minulla','sinulla','hänellä',
+    'olen','olet','on','olemme','olette','ovat',
+  ]),
+  ru: new Set([
+    // Russian determined by Cyrillic — but we include common words for scoring
+    'и','в','не','на','с','что','это','как','но','по',
+    'из','за','то','он','она','оно','они','мы','вы','ты',
+    'я','мне','мой','моя','его','её','наш','ваш','их',
+    'был','была','были','быть','есть','будет',
+    'да','нет','очень','тоже','ещё','уже','только',
+    'всё','все','этот','эта','тот','та','здесь','там',
+    'когда','где','почему','зачем','кто','кого','чего',
+    'привет','здравствуйте','пока','спасибо','пожалуйста',
+    'хорошо','плохо','большой','маленький','новый','старый',
+    'дом','школа','работа','вода','еда','друг','семья',
+    'время','день','ночь','утро','вечер',
+    'сегодня','завтра','вчера','сейчас','потом',
+  ]),
+};
+
+/**
+ * Smart language detection — only between the two selected languages (langFrom and langTo).
+ * Uses Cyrillic detection for Russian, and dictionary word matching for en vs fi.
+ * Returns langFrom or langTo (whichever the text appears to be), or null if unsure.
+ */
 function detectLanguage(text) {
-  const TE = window.TranscriptionEngine;
-  if (!TE) return null;
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  // Count character types
-  const cyrCount = (trimmed.match(/[а-яА-ЯёЁ]/g) || []).length;
-  const fiChars = (trimmed.match(/[äöåÄÖÅ]/g) || []).length;
-  const latinCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
-  const total = cyrCount + latinCount + fiChars;
+  const candidateA = langFrom;
+  const candidateB = langTo;
+
+  // Quick Cyrillic check
+  const hasCyrillic = /[а-яА-ЯёЁ]/.test(trimmed);
+  const hasLatin = /[a-zA-Z]/.test(trimmed);
+
+  // If one candidate is Russian
+  if (candidateA === 'ru' || candidateB === 'ru') {
+    const ruCandidate = (candidateA === 'ru') ? candidateA : candidateB;
+    const otherCandidate = (candidateA === 'ru') ? candidateB : candidateA;
+
+    // If text is mostly Cyrillic → Russian
+    if (hasCyrillic && !hasLatin) return ruCandidate;
+    // If text is only Latin → the other language
+    if (hasLatin && !hasCyrillic) return otherCandidate;
+    // Mixed — count which dominates
+    const cyrCount = (trimmed.match(/[а-яА-ЯёЁ]/g) || []).length;
+    const latCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+    if (cyrCount > latCount) return ruCandidate;
+    if (latCount > cyrCount) return otherCandidate;
+    return null;
+  }
+
+  // Both candidates are Latin-based (en vs fi)
+  // Use dictionary matching — count how many words belong to each language
+  const words = trimmed.toLowerCase().match(/[a-zA-ZäöåÄÖÅ]+/g);
+  if (!words || words.length === 0) return null;
+
+  // Finnish-specific characters are a strong signal
+  const hasFinnishChars = /[äöåÄÖÅ]/.test(trimmed);
+
+  let scoreA = 0;
+  let scoreB = 0;
+
+  const dictA = LANG_WORDS[candidateA];
+  const dictB = LANG_WORDS[candidateB];
+
+  for (const w of words) {
+    const inA = dictA && dictA.has(w);
+    const inB = dictB && dictB.has(w);
+    if (inA && !inB) scoreA += 2;
+    else if (inB && !inA) scoreB += 2;
+    else if (inA && inB) { scoreA += 0.5; scoreB += 0.5; }
+    // else: unknown word, no score
+  }
+
+  // Finnish chars are a strong bonus for Finnish candidate
+  if (hasFinnishChars) {
+    if (candidateA === 'fi') scoreA += words.length * 1.5;
+    if (candidateB === 'fi') scoreB += words.length * 1.5;
+  }
+
+  // Need a meaningful difference to decide
+  const total = scoreA + scoreB;
   if (total === 0) return null;
 
-  // If majority is Cyrillic → Russian
-  if (cyrCount > latinCount + fiChars) return 'ru';
-  // If Finnish-specific characters present → Finnish
-  if (fiChars > 0) return 'fi';
-  // Otherwise Latin → English
-  if (latinCount > cyrCount) return 'en';
+  // If one scores significantly higher, return it
+  if (scoreA > scoreB * 1.3) return candidateA;
+  if (scoreB > scoreA * 1.3) return candidateB;
 
-  return null;
+  // If Finnish chars present and one is Finnish, prefer it
+  if (hasFinnishChars) {
+    if (candidateA === 'fi') return candidateA;
+    if (candidateB === 'fi') return candidateB;
+  }
+
+  return null; // Too close to call
 }
+
+// ===== Auto-detect toggle button =====
+btnAutodetect.addEventListener('click', () => {
+  autoDetectEnabled = !autoDetectEnabled;
+  btnAutodetect.classList.toggle('active', autoDetectEnabled);
+  btnAutodetect.setAttribute('aria-pressed', autoDetectEnabled);
+  if (!autoDetectEnabled) {
+    autodetectHint.classList.add('hidden');
+  }
+});
 
 // ===== Dropdown Language Picker =====
 let openDropdown = null;
@@ -400,7 +567,6 @@ function resetTransToggle() {
 
 btnToggleTrans.addEventListener('click', async () => {
   if (transOpen) {
-    // Hide
     transOpen = false;
     transcriptionCard.classList.add('hidden');
     btnToggleTrans.classList.remove('open');
@@ -408,12 +574,10 @@ btnToggleTrans.addEventListener('click', async () => {
     return;
   }
 
-  // Show — load transcription on demand
   transOpen = true;
   btnToggleTrans.classList.add('open');
   transToggleText.textContent = 'Скрыть транскрипцию';
 
-  // Determine which language to transcribe
   const TE = window.TranscriptionEngine;
   if (!TE) return;
 
@@ -422,16 +586,13 @@ btnToggleTrans.addEventListener('click', async () => {
   let transLang = '';
 
   if (langFrom === 'ru') {
-    // Translating FROM Russian → transcribe the result (target language)
     textToTranscribe = lastTransResult;
     transLang = langTo;
   } else {
-    // Translating FROM en/fi → transcribe the original text (source language)
     textToTranscribe = lastOrigText;
     transLang = langFrom;
   }
 
-  // If both are ru, no transcription needed
   if (transLang === 'ru' || !textToTranscribe) {
     transOpen = false;
     btnToggleTrans.classList.remove('open');
@@ -441,7 +602,6 @@ btnToggleTrans.addEventListener('click', async () => {
 
   transLabel.textContent = `Произношение ${langNames[transLang] || ''}`;
 
-  // Show card with loading
   transcriptionCard.classList.remove('hidden');
   transcriptionEl.textContent = '';
   transLoading.classList.remove('hidden');
@@ -465,33 +625,18 @@ async function handleTranslate() {
   const text = input.value.trim();
   if (!text) { showError('Введи текст для перевода'); return; }
 
-  // Auto-detect language and swap if needed
-  const detected = detectLanguage(text);
   let didSwap = false;
 
-  if (detected && detected !== langFrom) {
-    // The text language matches langTo → swap
-    if (detected === langTo) {
+  // Auto-detect only if enabled
+  if (autoDetectEnabled) {
+    const detected = detectLanguage(text);
+
+    // Only swap if the detected language equals langTo (i.e. user typed in the "target" language)
+    if (detected && detected === langTo) {
       const prevFrom = langFrom;
       const prevTo = langTo;
       langFrom = prevTo;
       langTo = prevFrom;
-      updateSelectDisplay('from', langFrom);
-      updateSelectDisplay('to', langTo);
-      markActiveOption('dropdown-from', langFrom);
-      markActiveOption('dropdown-to', langTo);
-      updatePlaceholder();
-      didSwap = true;
-    } else if (detected !== langFrom) {
-      // Detected a third language — set it as source, keep target
-      const prevTarget = langTo;
-      langFrom = detected;
-      // If detected same as target, swap target to something else
-      if (langFrom === prevTarget) {
-        // Find the other lang
-        const others = ['en', 'ru', 'fi'].filter(l => l !== langFrom);
-        langTo = others[0];
-      }
       updateSelectDisplay('from', langFrom);
       updateSelectDisplay('to', langTo);
       markActiveOption('dropdown-from', langFrom);
@@ -520,14 +665,12 @@ async function handleTranslate() {
   try {
     const result = await translateText(text, langFrom, langTo);
 
-    // Save for on-demand transcription
     lastOrigText = text;
     lastTransResult = result;
     lastTransLang = (langFrom === 'ru') ? langTo : langFrom;
 
     translationEl.textContent = result;
 
-    // Hide transcription toggle if both are ru
     if (langFrom === 'ru' && langTo === 'ru') {
       btnToggleTrans.classList.add('hidden');
     } else {
@@ -539,7 +682,6 @@ async function handleTranslate() {
     loadingEl.classList.add('hidden');
     results.classList.remove('hidden');
 
-    // Re-trigger slide-up animations
     results.querySelectorAll('.slide-up').forEach(el => {
       el.style.animation = 'none';
       void el.offsetHeight;
@@ -579,7 +721,6 @@ async function buildBreakdown(text, from, to) {
 
     let html = `<span class="w-orig">${esc(word)}</span>`;
 
-    // Show transcription in word chips for non-Russian source
     if (from !== 'ru') {
       const tr = await TE.getTranscription(word, from);
       if (tr) html += `<span class="w-trans">[${esc(tr)}]</span>`;
